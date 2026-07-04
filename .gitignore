@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.venv/
+.python-version
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Compiled
+*.so
+
+# IDE
+.idea/
+.vscode/
+
+# Editor temp
+*.swp
+*.swo
+*~
+
+# App runtime data
+.zorma/
+
+# opencode agent config (local)
+.agents/
+
+# Project reports (not part of source)
+Zorma_Informe_*
+
+# OS
+.DS_Store
+Thumbs.db
