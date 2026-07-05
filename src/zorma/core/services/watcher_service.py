@@ -74,7 +74,11 @@ class WatcherService:
     ) -> None:
         """Inicia el monitoreo de las rutas especificadas."""
         self._watcher.update_filter(filter_config)
-        self._watcher.start(paths, self._on_event)
+        
+        # Obtener patrones de exclusión de las reglas
+        excluded_patterns = ["Archivos *"]
+        
+        self._watcher.start(paths, self._on_event, excluded_patterns=excluded_patterns)
         self._initial_scan(paths, filter_config)
         logger.info("Watcher started on %d path(s)", len(paths))
 

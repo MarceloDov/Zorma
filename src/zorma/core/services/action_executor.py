@@ -114,9 +114,9 @@ class ActionExecutor:
         else:
             target = (file.parent / raw).resolve()
 
-        # Validación final: no permitir rutas fuera de la raíz del sistema o rutas protegidas
-        if not str(target).startswith(str(Path("/").resolve())):
-             raise ValueError("Invalid target path")
+        # Validación final: la ruta debe ser absoluta
+        if not target.is_absolute():
+             raise ValueError("Invalid target path: must be absolute")
 
         return target / file.name
 

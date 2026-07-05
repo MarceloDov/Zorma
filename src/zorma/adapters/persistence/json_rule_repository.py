@@ -50,8 +50,8 @@ class JsonRuleRepository(RuleRepository):
 
         if current_version < SCHEMA_VERSION:
             logger.info("Schema v%d < v%d — migrating rules", current_version, SCHEMA_VERSION)
+            # Perform actual migration here if needed
             self._meta_file.write_text(json.dumps({"schema_version": SCHEMA_VERSION}))
-            return
 
         for fname, store in [
             (self._rules_file, self._rules),
@@ -104,7 +104,7 @@ class JsonRuleRepository(RuleRepository):
             group_id=d.get("group_id", ""),
             name=d.get("name", ""),
             enabled=d.get("enabled", True),
-            condition_type=ConditionType(d["condition_type"]),
+            condition_type=ConditionType(d.get("condition_type", "extension")),
             condition_value=d.get("condition_value", ""),
             created_at=datetime.fromisoformat(d["created_at"]) if "created_at" in d else datetime.now(),
             updated_at=datetime.fromisoformat(d["updated_at"]) if "updated_at" in d else datetime.now(),

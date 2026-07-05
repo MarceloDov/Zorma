@@ -58,8 +58,10 @@ class FilterConfig:
             except OSError:
                 return False
         if self.exclude_dirs:
+            # Convertimos a minúsculas para comparación insensible a mayúsculas
+            exclude_dirs_lower = [d.lower() for d in self.exclude_dirs]
             for part in file_path.parts:
-                if part in self.exclude_dirs:
+                if part.lower() in exclude_dirs_lower:
                     return False
         return True
 
@@ -68,13 +70,14 @@ class FileWatcher(ABC):
     """Interfaz para el observador de archivos."""
 
     @abstractmethod
-    def start(self, paths: list[Path], callback: Callable[[FileEvent], None]) -> None:
+    def start(self, paths: list[Path], callback: Callable[[FileEvent], None], excluded_patterns: list[str] | None = None) -> None:
         """
         Inicia el observador de archivos.
 
         Args:
             paths: Lista de rutas a observar.
             callback: Función de devolución de llamada para eventos de archivo.
+            excluded_patterns: Lista de patrones de archivos/carpetas a excluir.
         """
         ...
 
