@@ -16,7 +16,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..shared.styles import COLORS, btn_secondary
+from ..shared.styles import COLORS, FONT_SIZES, SPACING, btn_secondary
+from ..shared.widgets import EmptyState
+
+PAGE_SIZE = 100
 
 
 class HistoryView(QWidget):
@@ -24,28 +27,31 @@ class HistoryView(QWidget):
         super().__init__()
         self._data_dir = data_dir or Path.home() / ".zorma"
         self._log_file = self._data_dir / "history.jsonl"
+        self._all_entries: List[Dict[str, Any]] = []
+        self._visible_count = 0
         self._setup_ui()
 
     def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(20)
+        layout.setContentsMargins(SPACING["3xl"], SPACING["2xl"], SPACING["3xl"], SPACING["2xl"])
+        layout.setSpacing(SPACING["xl"])
 
         header_row = QHBoxLayout()
         header = QLabel("Historial de Clasificación")
-        header.setStyleSheet(f"color: {COLORS['text_bright']}; font-size: 26px; font-weight: 700;")
+        header.setStyleSheet(f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['2xl']}; font-weight: 700;")
         header_row.addWidget(header)
 
         refresh_btn = QPushButton("⟳ Actualizar")
         refresh_btn.setStyleSheet(btn_secondary())
         refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        refresh_btn.setAccessibleName("Actualizar historial")
         refresh_btn.clicked.connect(self._load_history)
         header_row.addStretch()
         header_row.addWidget(refresh_btn)
         layout.addLayout(header_row)
 
         info = QLabel("Revise todos los movimientos de archivos y resultados de clasificación.")
-        info.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 13px;")
+        info.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['base']};")
         info.setWordWrap(True)
         layout.addWidget(info)
 
@@ -69,46 +75,66 @@ class HistoryView(QWidget):
         """)
         layout.addWidget(self._table, 1)
 
-        self._empty_label = QLabel(
-            "No hay historial disponible aún.\n"
-            "Inicie el monitor para registrar clasificaciones."
+        self._load_more_btn = QPushButton("Cargar más…")
+        self._load_more_btn.setStyleSheet(btn_secondary())
+        self._load_more_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._load_more_btn.setAccessibleName("Cargar más registros")
+        self._load_more_btn.clicked.connect(self._load_more)
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        button_row.addWidget(self._load_more_btn)
+        button_row.addStretch()
+        button_layout = QVBoxLayout()
+        button_layout.addLayout(button_row)
+        layout.addLayout(button_layout)
+
+        self._empty_state = EmptyState(
+            icon="📋",
+            title="Sin historial aún",
+            description="Inicie el monitor para empezar a registrar clasificaciones de archivos.",
         )
-        self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._empty_label.setStyleSheet(
-            f"color: {COLORS['text_muted']}; font-size: 14px; padding: 40px;"
-        )
-        self._empty_label.setWordWrap(True)
-        layout.addWidget(self._empty_label)
+        layout.addWidget(self._empty_state)
 
         self._load_history()
 
     def _load_history(self) -> None:
         self._table.setRowCount(0)
+        self._visible_count = 0
 
         if not self._log_file.exists():
             self._table.hide()
-            self._empty_label.show()
+            self._load_more_btn.hide()
+            self._empty_state.show()
             return
 
-        entries: List[Dict[str, Any]] = []
+        self._all_entries = []
         with self._log_file.open("r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
                     try:
-                        entries.append(json.loads(line))
+                        self._all_entries.append(json.loads(line))
                     except json.JSONDecodeError:
                         continue
 
-        if not entries:
+        if not self._all_entries:
             self._table.hide()
-            self._empty_label.show()
+            self._load_more_btn.hide()
+            self._empty_state.show()
             return
 
         self._table.show()
-        self._empty_label.hide()
+        self._empty_state.hide()
+        self._load_more()
 
-        for entry in reversed(entries):
+    def _load_more(self) -> None:
+        start = self._visible_count
+        batch = list(reversed(self._all_entries))[start:start + PAGE_SIZE]
+        if not batch:
+            self._load_more_btn.hide()
+            return
+
+        for entry in batch:
             row = self._table.rowCount()
             self._table.insertRow(row)
 
@@ -137,3 +163,8 @@ class HistoryView(QWidget):
 
             src = entry.get("source_path", "")
             self._table.setItem(row, 5, QTableWidgetItem(str(src)))
+
+        self._visible_count += len(batch)
+        remaining = len(self._all_entries) - self._visible_count
+        self._load_more_btn.setText(f"Cargar más… ({remaining} restantes)" if remaining > 0 else "Sin más registros")
+        self._load_more_btn.setVisible(remaining > 0)

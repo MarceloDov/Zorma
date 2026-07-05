@@ -8,7 +8,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from ...core.models.classification import ClassificationResult, ClassificationStatus
-from .styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING
+from .styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, btn_secondary
 
 
 class SidebarButton(QPushButton):
@@ -23,6 +23,7 @@ class SidebarButton(QPushButton):
         self.setText(text)
         self.setFixedHeight(46)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAccessibleName(text)
         if icon_path and icon_path.exists():
             self.setIcon(QIcon(str(icon_path)))
             self.setIconSize(QSize(18, 18))
@@ -79,6 +80,8 @@ class Card(QFrame):
         self._color = color
         self.setObjectName("card")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAccessibleName(f"Card: {title}")
+        self.setAccessibleDescription(f"Value: {value}")
         self._update_style()
 
         layout = QVBoxLayout(self)
@@ -227,7 +230,6 @@ class TimelineFeed(QScrollArea):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._max_rows = 100
-        self._empty_label: Optional[QLabel] = None
 
         self.setWidgetResizable(True)
         self.setFrameShape(QFrame.Shape.NoFrame)
@@ -248,19 +250,15 @@ class TimelineFeed(QScrollArea):
 
         self.setWidget(self._container)
 
-        self._empty_label = QLabel("Sin actividad aún.\nSeleccione una carpeta para iniciar.")
-        self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._empty_label.setStyleSheet(
-            f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['md']}; padding: {SPACING['3xl']}px;"
+        self._empty_icon = EmptyState(
+            icon="📂",
+            title="Sin actividad aún",
+            description="Seleccione una carpeta y clasifique archivos para ver la actividad aquí.",
         )
-        self._empty_label.setWordWrap(True)
-        self._layout.insertWidget(0, self._empty_label)
+        self._layout.insertWidget(0, self._empty_icon)
 
     def add_result(self, result: ClassificationResult, can_undo: bool = False) -> None:
-        if self._empty_label is not None:
-            self._empty_label.setParent(None)
-            self._empty_label.deleteLater()
-            self._empty_label = None
+        self._empty_icon.hide()
 
         row = TimelineRow(result, can_undo)
         row.undo_clicked.connect(self.undo_requested)
@@ -287,10 +285,122 @@ class TimelineFeed(QScrollArea):
                     w.hide()
                     w.deleteLater()
 
-        self._empty_label = QLabel("Sin actividad aún.\nSeleccione una carpeta para iniciar.")
-        self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._empty_label.setStyleSheet(
-            f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['md']}; padding: {SPACING['3xl']}px;"
+        self._empty_icon.show()
+        self._layout.insertWidget(0, self._empty_icon)
+
+
+class EmptyState(QWidget):
+    def __init__(
+        self,
+        icon: str,
+        title: str,
+        description: str,
+        button_text: str = "",
+        parent: Optional[QWidget] = None,
+    ) -> None:
+        super().__init__(parent)
+        self._button_signal: Optional[pyqtSignal] = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(SPACING["3xl"], SPACING["3xl"], SPACING["3xl"], SPACING["3xl"])
+        layout.setSpacing(SPACING["md"])
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        icon_label = QLabel(icon)
+        icon_label.setStyleSheet(
+            f"color: {COLORS['text_muted']}; font-size: 36px; background: transparent;"
         )
-        self._empty_label.setWordWrap(True)
-        self._layout.insertWidget(0, self._empty_label)
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(icon_label)
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet(
+            f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['lg']}; font-weight: 700; background: transparent;"
+        )
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+
+        desc_label = QLabel(description)
+        desc_label.setStyleSheet(
+            f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['base']}; background: transparent;"
+        )
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_label.setWordWrap(True)
+        layout.addWidget(desc_label)
+
+        if button_text:
+            btn = QPushButton(button_text)
+            btn.setStyleSheet(btn_secondary())
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_layout = QHBoxLayout()
+            btn_layout.addStretch()
+            btn_layout.addWidget(btn)
+            btn_layout.addStretch()
+            layout.addLayout(btn_layout)
+
+            self._button = btn
+
+    def set_button_callback(self, callback: object) -> None:
+        if hasattr(self, "_button"):
+            self._button.clicked.connect(callback)
+
+
+class OnboardingWidget(QFrame):
+    folder_requested = pyqtSignal()
+    rules_requested = pyqtSignal()
+    start_requested = pyqtSignal()
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("onboarding")
+        self.setStyleSheet(f"""
+            #onboarding {{
+                background-color: {COLORS["card"]};
+                border: 2px dashed {COLORS["border"]};
+                border-radius: {BORDER_RADIUS["lg"]};
+            }}
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(SPACING["3xl"], SPACING["3xl"], SPACING["3xl"], SPACING["3xl"])
+        layout.setSpacing(SPACING["md"])
+
+        title = QLabel("🎉 ¡Bienvenido a Zorma!")
+        title.setStyleSheet(f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['xl']}; font-weight: 700;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title)
+
+        subtitle = QLabel("Organiza tus archivos automáticamente en 3 pasos:")
+        subtitle.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['md']};")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(subtitle)
+
+        steps = [
+            ("① Selecciona una carpeta a monitorear", self.folder_requested),
+            ("② Revisa tus reglas de clasificación", self.rules_requested),
+            ("③ Inicia la clasificación", self.start_requested),
+        ]
+
+        for text, callback in steps:
+            btn = QPushButton(text)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {COLORS["bg2"]};
+                    color: {COLORS["text"]};
+                    border: 1px solid {COLORS["border"]};
+                    border-radius: {BORDER_RADIUS["md"]};
+                    padding: {SPACING["md"]}px;
+                    font-size: {FONT_SIZES["base"]};
+                    font-weight: 600;
+                    text-align: left;
+                }}
+                QPushButton:hover {{
+                    background-color: {COLORS["card_hover"]};
+                    border-color: {COLORS["primary"]};
+                }}
+            """)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(callback)
+            layout.addWidget(btn)
+
+

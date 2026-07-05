@@ -7,13 +7,17 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QSystemTrayIcon
 
-from ...core.ports.notification_service import NotificationService, NotificationUrgency
+from ...core.models.notification_urgency import NotificationUrgency
 
 
-class PyQtNotificationAdapter(NotificationService):
+from PyQt6.QtCore import QObject, pyqtSignal
+
+class PyQtNotificationAdapter(QObject):
     """
     Implementación del servicio de notificaciones utilizando PyQt6 QSystemTrayIcon.
     """
+    _notification_signal = pyqtSignal(str, str, int, int)
+    
     _tray_icon: Optional[QSystemTrayIcon]
     _enabled: bool
     _sound: bool
@@ -21,20 +25,16 @@ class PyQtNotificationAdapter(NotificationService):
     def __init__(self, tray_icon: Optional[QSystemTrayIcon] = None) -> None:
         """
         Inicializa el adaptador con un icono de bandeja opcional.
-
-        Args:
-            tray_icon: El icono de la bandeja del sistema.
         """
+        super().__init__()
         self._tray_icon = tray_icon
         self._enabled = True
         self._sound = True
+        self._notification_signal.connect(self._show_message)
 
     def set_tray_icon(self, tray_icon: QSystemTrayIcon) -> None:
         """
         Establece o actualiza el icono de la bandeja del sistema.
-
-        Args:
-            tray_icon: El nuevo icono de la bandeja del sistema.
         """
         self._tray_icon = tray_icon
 
@@ -46,11 +46,6 @@ class PyQtNotificationAdapter(NotificationService):
     ) -> None:
         """
         Envía una notificación al sistema.
-
-        Args:
-            title: El título de la notificación.
-            message: El cuerpo del mensaje.
-            urgency: El nivel de urgencia de la notificación.
         """
         if not self._enabled or self._tray_icon is None:
             return
@@ -61,12 +56,12 @@ class PyQtNotificationAdapter(NotificationService):
             NotificationUrgency.CRITICAL: QSystemTrayIcon.MessageIcon.Critical.value,
         }
         duration = 3000 if urgency == NotificationUrgency.LOW else 5000
-        self._tray_icon.showMessage(
-            title,
-            message,
-            icon_map.get(urgency, QSystemTrayIcon.MessageIcon.Information.value),
-            duration,
-        )
+        icon_val = icon_map.get(urgency, QSystemTrayIcon.MessageIcon.Information.value)
+        self._notification_signal.emit(title, message, icon_val, duration)
+
+    def _show_message(self, title: str, message: str, icon_val: int, duration: int) -> None:
+        if self._tray_icon:
+            self._tray_icon.showMessage(title, message, QSystemTrayIcon.MessageIcon(icon_val), duration)
 
     def configure(self, enabled: bool, sound: bool) -> None:
         """

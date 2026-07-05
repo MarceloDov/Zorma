@@ -143,15 +143,15 @@ class TestActionExecutor:
         result = self.executor.execute(action, src)
         assert result.status == ClassificationStatus.SUCCESS
         assert result.destination_path is not None
-        assert "Archivos txt" in str(result.destination_path.parent)
+        assert "Archivos .txt" in str(result.destination_path.parent)
         assert result.destination_path.name == "notas.txt"
 
     @pytest.mark.parametrize(
         "filename,template_str,expected_folder",
         [
-            ("foto.jpg", "Imagenes {ext}", "Imagenes jpg"),
-            ("doc.pdf", "Documentos {ext}", "Documentos pdf"),
-            ("video.mp4", "Videos {ext}", "Videos mp4"),
+            ("foto.jpg", "Imagenes {ext}", "Imagenes .jpg"),
+            ("doc.pdf", "Documentos {ext}", "Documentos .pdf"),
+            ("video.mp4", "Videos {ext}", "Videos .mp4"),
         ],
     )
     def test_build_dest_path_with_ext_template_multiple(

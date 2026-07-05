@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import json
 import logging
 from collections.abc import Callable, Generator
 from pathlib import Path
 
+from ...adapters.persistence.zorma_repository import ZormaRepository
 from ..models.classification import ClassificationResult, ClassificationStatus
 from ..models.file_event import FileEvent
+from ..models.filter_config import FilterConfig
 from ..models.rule import Rule, RuleAction
-from ..ports.file_watcher import FileWatcher, FilterConfig
-from ..ports.rule_repository import RuleRepository
+from ...adapters.watcher.watchdog_watcher import WatchdogFileWatcher
 from .action_executor import ActionExecutor
 from .rule_evaluator import RuleEvaluator
 from .undo_manager import UndoManager
@@ -17,41 +17,21 @@ from .undo_manager import UndoManager
 logger = logging.getLogger(__name__)
 
 
-def _log_classification(data_dir: Path, result: ClassificationResult) -> None:
-    log_file = data_dir / "history.jsonl"
-    entry = {
-        "file_name": result.file_name,
-        "source_path": str(result.source_path),
-        "destination_path": str(result.destination_path) if result.destination_path else None,
-        "rule_name": result.rule_applied.name if result.rule_applied else None,
-        "action_applied": result.action_applied.action_type.value if result.action_applied else None,
-        "status": result.status,
-        "error_message": result.error_message,
-        "timestamp": result.timestamp.isoformat(),
-    }
-    try:
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-        with log_file.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, default=str) + "\n")
-    except OSError:
-        logger.exception("Failed to write classification log")
-
-
 class WatcherService:
     """Servicio encargado de monitorear cambios en archivos y clasificarlos."""
     def __init__(
         self,
-        watcher: FileWatcher,
-        repo: RuleRepository,
+        watcher: WatchdogFileWatcher,
+        repo: ZormaRepository,
         evaluator: RuleEvaluator,
         executor: ActionExecutor,
-        data_dir: Path | None = None,
+        history: ZormaRepository,
     ) -> None:
         self._watcher = watcher
         self._repo = repo
         self._evaluator = evaluator
         self._executor = executor
-        self._data_dir = data_dir
+        self._history = history
         self._undo_manager: UndoManager | None = None
         self._result_callback: Callable[[ClassificationResult], None] | None = None
 
@@ -62,6 +42,10 @@ class WatcherService:
     def get_undo_manager(self) -> UndoManager | None:
         """Retorna el gestor de deshacer operaciones."""
         return self._undo_manager
+
+    def get_history(self) -> list[ClassificationResult]:
+        """Retorna el historial de clasificaciones."""
+        return self._history.get_history()
 
     def set_result_callback(self, callback: Callable[[ClassificationResult], None]) -> None:
         """Asigna una función callback para el resultado de la clasificación."""
@@ -74,10 +58,10 @@ class WatcherService:
     ) -> None:
         """Inicia el monitoreo de las rutas especificadas."""
         self._watcher.update_filter(filter_config)
-        
+
         # Obtener patrones de exclusión de las reglas
         excluded_patterns = ["Archivos *"]
-        
+
         self._watcher.start(paths, self._on_event, excluded_patterns=excluded_patterns)
         self._initial_scan(paths, filter_config)
         logger.info("Watcher started on %d path(s)", len(paths))
@@ -87,7 +71,7 @@ class WatcherService:
         self._watcher.stop()
         logger.info("Watcher stopped")
 
-    def _on_event(self, event: FileEvent) -> None:
+    def _on_event(self, event: FileEvent) -> ClassificationResult | None:
         """Manejador de eventos de archivo."""
         if event.is_directory:
             result = ClassificationResult(
@@ -96,22 +80,22 @@ class WatcherService:
                 status=ClassificationStatus.FILTERED_OUT,
                 error_message="Directory event ignored",
             )
-            return
+            return result
         result = self._classify(event.src_path)
         self._post_process_result(result)
         if self._result_callback:
             self._result_callback(result)
+        return result
 
-    def classify(self, file_path: Path) -> ClassificationResult:
+    def classify(self, file_path: Path, overwrite: bool = False) -> ClassificationResult:
         """Clasifica un archivo dado de forma manual."""
-        result = self._classify(file_path)
+        result = self._classify(file_path, overwrite)
         self._post_process_result(result)
         return result
 
     def _post_process_result(self, result: ClassificationResult) -> None:
         """Procesa el resultado: registra en log y en el gestor de deshacer."""
-        if self._data_dir is not None:
-            _log_classification(self._data_dir, result)
+        self._history.add_history(result)
         if self._undo_manager is not None:
             self._undo_manager.record(result)
 
@@ -132,7 +116,7 @@ class WatcherService:
         """Busca la mejor acción para un archivo dado."""
         if not file_path.exists():
             return None
-        rules = self._repo.get_all()
+        rules = self._repo.get_all_rules()
         matched = self._evaluator.evaluate_all(file_path, rules)
         if not matched:
             return None
@@ -142,7 +126,7 @@ class WatcherService:
             return None
         return best, actions[0]
 
-    def _classify(self, file_path: Path) -> ClassificationResult:
+    def _classify(self, file_path: Path, overwrite: bool = False) -> ClassificationResult:
         """Clasifica internamente un archivo."""
         match = self._find_action(file_path)
         result = ClassificationResult(
@@ -155,7 +139,7 @@ class WatcherService:
         rule, action = match
         result.rule_applied = rule
         result.action_applied = action
-        exec_result = self._executor.execute(action, file_path)
+        exec_result = self._executor.execute(action, file_path, overwrite)
         result.status = exec_result.status
         result.destination_path = exec_result.destination_path
         result.error_message = exec_result.error_message
@@ -195,11 +179,10 @@ class WatcherService:
         paths: list[Path],
         filter_config: FilterConfig | None = None,
     ) -> list[ClassificationResult]:
-        """Realiza un escaneo inicial de las rutas configuradas."""
+        """Realiza un escaneo inicial de las rutas configuradas (solo vista previa)."""
         results: list[ClassificationResult] = []
         for fpath in self._iter_files(paths, filter_config):
-            result = self._classify(fpath)
-            self._post_process_result(result)
+            result = self.preview(fpath)
             if self._result_callback:
                 self._result_callback(result)
             results.append(result)

@@ -5,7 +5,7 @@ from watchdog.events import DirCreatedEvent, FileDeletedEvent, FileModifiedEvent
 
 from zorma.adapters.watcher.watchdog_watcher import ZormaEventHandler
 from zorma.core.models.file_event import FileEvent
-from zorma.core.ports.file_watcher import FilterConfig
+from zorma.core.models.filter_config import FilterConfig
 
 
 class TestZormaEventHandler:

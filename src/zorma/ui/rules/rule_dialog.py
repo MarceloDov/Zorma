@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -20,6 +21,19 @@ from PyQt6.QtWidgets import (
 
 from ...core.models.rule import ActionType, ConditionType, Rule, RuleAction
 from ..shared.styles import COLORS, btn_primary, btn_secondary
+
+CONDITION_LABELS = {
+    ConditionType.EXTENSION: "Extensión",
+    ConditionType.SIZE: "Tamaño",
+    ConditionType.DATE: "Fecha",
+    ConditionType.NAME: "Nombre",
+}
+
+ACTION_LABELS = {
+    ActionType.MOVE: "Mover",
+    ActionType.COPY: "Copiar",
+    ActionType.RENAME: "Renombrar",
+}
 
 
 class RuleDialog(QDialog):
@@ -58,21 +72,24 @@ class RuleDialog(QDialog):
 
         self._name_input = QLineEdit()
         self._name_input.setPlaceholderText("ej. Videos, Documentos, Archivos Grandes...")
-        form.addRow("Name:", self._name_input)
+        self._name_input.setAccessibleName("Nombre de la regla")
+        form.addRow("Nombre:", self._name_input)
 
-        self._enabled_check = QCheckBox("Enabled")
+        self._enabled_check = QCheckBox("Habilitada")
         self._enabled_check.setChecked(True)
         form.addRow("", self._enabled_check)
 
         self._condition_type = QComboBox()
         for ct in ConditionType:
-            self._condition_type.addItem(ct.value.capitalize(), ct)
+            self._condition_type.addItem(CONDITION_LABELS[ct], ct)
+        self._condition_type.setAccessibleName("Tipo de condición")
         self._condition_type.currentIndexChanged.connect(self._on_condition_type_changed)
-        form.addRow("Condition Type:", self._condition_type)
+        form.addRow("Tipo de condición:", self._condition_type)
 
         self._condition_value = QLineEdit()
         self._condition_value.setPlaceholderText(".mp4,.mkv,.avi")
-        form.addRow("Condition Value:", self._condition_value)
+        self._condition_value.setAccessibleName("Valor de condición")
+        form.addRow("Valor de condición:", self._condition_value)
 
         self._condition_hint = QLabel("Extensiones separadas por coma, ej. .mp4,.mkv,.avi")
         self._condition_hint.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
@@ -80,29 +97,39 @@ class RuleDialog(QDialog):
 
         self._action_type = QComboBox()
         for at in ActionType:
-            self._action_type.addItem(at.value.capitalize(), at)
+            self._action_type.addItem(ACTION_LABELS[at], at)
         self._action_type.currentIndexChanged.connect(self._on_action_type_changed)
-        form.addRow("Action Type:", self._action_type)
+        form.addRow("Tipo de acción:", self._action_type)
 
         folder_row = QHBoxLayout()
         folder_row.setSpacing(8)
         self._target_folder = QLineEdit()
         self._target_folder.setPlaceholderText(str(Path.home() / "Videos"))
+        self._target_folder.setAccessibleName("Carpeta destino")
         folder_row.addWidget(self._target_folder, 1)
         browse_btn = QPushButton("Examinar...")
         browse_btn.setStyleSheet(btn_secondary().replace("padding: 10px 22px;", "padding: 8px 16px;"))
         browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         browse_btn.clicked.connect(self._browse_folder)
         folder_row.addWidget(browse_btn)
-        form.addRow("Target Folder:", folder_row)
+        form.addRow("Carpeta destino:", folder_row)
 
-        self._target_hint = QLabel("Usa {ext} para crear carpetas automáticas por extensión, ej. C:\\Documentos\\{ext}")
+        self._target_hint = QLabel("Usa {ext} para crear carpetas automáticas por extensión, ej. C:\\Documentos\\{ext} → Documentos\\.txt")
         self._target_hint.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
         form.addRow("", self._target_hint)
 
         self._rename_pattern = QLineEdit()
         self._rename_pattern.setPlaceholderText("{name}_backup{ext}")
-        form.addRow("Rename Pattern:", self._rename_pattern)
+        self._rename_pattern.setAccessibleName("Patrón de renombrado")
+        self._rename_pattern.textChanged.connect(self._validate)
+        form.addRow("Patrón de renombrado:", self._rename_pattern)
+
+        self._error_label = QLabel("")
+        self._error_label.setStyleSheet(f"color: {COLORS['error']};")
+        layout.addWidget(self._error_label)
+
+        self._name_input.textChanged.connect(self._validate)
+        self._target_folder.textChanged.connect(self._validate)
 
         layout.addLayout(form)
         layout.addStretch()
@@ -117,17 +144,64 @@ class RuleDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         btn_row.addWidget(cancel_btn)
 
-        save_btn = QPushButton("Guardar Regla")
-        save_btn.setStyleSheet(btn_primary())
-        save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        save_btn.clicked.connect(self._save)
-        btn_row.addWidget(save_btn)
+        self._save_btn = QPushButton("Guardar Regla")
+        self._save_btn.setStyleSheet(btn_primary())
+        self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._save_btn.clicked.connect(self._save)
+        btn_row.addWidget(self._save_btn)
 
         layout.addLayout(btn_row)
 
+        self._validate()
         self._update_hints()
 
+    _SIZE_RE = re.compile(r"(<=?|>=?|==?)\s*(\d+)\s*(KB|MB|GB)?$", re.IGNORECASE)
+    _DATE_RE = re.compile(r"(<|>|==?)\s*(\d+)\s*(days|hours|minutes|días|dias|horas|minutos)?$", re.IGNORECASE)
+
+    def _validate(self) -> None:
+        name = self._name_input.text().strip()
+        target = self._target_folder.text().strip()
+        cond_val = self._condition_value.text().strip()
+        cond_type = self._condition_type.currentData()
+        action_type = self._action_type.currentData()
+
+        errors: list[str] = []
+
+        if not name:
+            errors.append("El nombre de la regla es obligatorio.")
+
+        if not cond_val:
+            errors.append("El valor de la condición no puede estar vacío.")
+        elif cond_type == ConditionType.EXTENSION:
+            parts = [e.strip() for e in cond_val.split(",")]
+            if not parts or not any(parts):
+                errors.append("Indique al menos una extensión, ej. .mp4,.mkv")
+        elif cond_type == ConditionType.SIZE:
+            if not self._SIZE_RE.match(cond_val):
+                errors.append("Formato inválido. Ej: >100 MB, <=1 GB, ==512 KB")
+        elif cond_type == ConditionType.DATE:
+            if not self._DATE_RE.match(cond_val):
+                errors.append("Formato inválido. Ej: <7 días, >30 días, <1 hora")
+        elif cond_type == ConditionType.NAME:
+            if not cond_val:
+                errors.append("El valor del nombre no puede estar vacío.")
+
+        is_move_copy = action_type in (ActionType.MOVE, ActionType.COPY)
+        is_rename = action_type == ActionType.RENAME
+        if is_move_copy and not target:
+            errors.append("La carpeta destino es obligatoria para mover o copiar.")
+        if is_rename:
+            pattern = self._rename_pattern.text().strip()
+            if not pattern:
+                errors.append("El patrón de renombrado no puede estar vacío.")
+            elif "{name}" not in pattern and "{ext}" not in pattern:
+                errors.append('El patrón debe incluir {name} y/o {ext}, ej. "{name}_backup{ext}"')
+
+        self._error_label.setText("\n".join(errors))
+        self._save_btn.setEnabled(not errors)
+
     def _on_condition_type_changed(self) -> None:
+
         self._update_hints()
 
     def _on_action_type_changed(self) -> None:

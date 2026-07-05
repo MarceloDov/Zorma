@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -28,8 +28,8 @@ class RuleGroup:
     name: str = ""
     description: str = ""
     priority: int = 0
-    created_at: datetime = field(default_factory=datetime.now)
-    updated_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     is_default: bool = False
 
 
@@ -42,7 +42,7 @@ class RuleAction:
     target_folder: str = ""
     copy_enabled: bool = False
     rename_pattern: str = ""
-    created_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -52,7 +52,8 @@ class Rule:
     group_id: str = ""
     name: str = ""
     enabled: bool = True
+    priority: int = 0
     condition_type: ConditionType = ConditionType.EXTENSION
     condition_value: str = ""
-    created_at: datetime = field(default_factory=datetime.now)
-    updated_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

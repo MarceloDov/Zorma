@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -28,4 +28,5 @@ class ClassificationResult:
     action_applied: RuleAction | None = None
     status: ClassificationStatus = ClassificationStatus.NO_RULE
     error_message: str = ""
-    timestamp: datetime = field(default_factory=datetime.now)
+    overwrite: bool = False
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

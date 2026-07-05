@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -19,7 +19,7 @@ class FileEvent:
     """Representa un evento ocurrido sobre un archivo en el sistema de archivos."""
     src_path: Path
     event_type: FileEventType
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     is_directory: bool = False
     dest_path: Path | None = None
 
@@ -32,11 +32,3 @@ class FileEvent:
     def extension(self) -> str:
         """Retorna la extensión del archivo en minúsculas."""
         return self.src_path.suffix.lower()
-
-    @property
-    def size(self) -> int:
-        """Retorna el tamaño del archivo en bytes."""
-        try:
-            return self.src_path.stat().st_size
-        except OSError:
-            return 0

@@ -3,14 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+from PyQt6.QtCore import QPropertyAnimation, Qt
 from PyQt6.QtGui import QAction, QCloseEvent, QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QMainWindow,
     QMenu,
+    QPushButton,
     QStackedWidget,
     QSystemTrayIcon,
     QVBoxLayout,
@@ -18,37 +21,27 @@ from PyQt6.QtWidgets import (
 )
 
 from ..adapters.notifications.pyqt_notification_adapter import PyQtNotificationAdapter
+from ..adapters.persistence.zorma_repository import ZormaRepository
 from ..config.settings import APP_NAME, ICONS_DIR
-from ..core.ports.rule_repository import RuleRepository
 from ..core.services.undo_manager import UndoManager
 from ..core.services.watcher_service import WatcherService
 from .dashboard.dashboard_view import DashboardView
 from .history.history_view import HistoryView
 from .rules.rules_view import RulesView
 from .settings.settings_view import SettingsView
-from .shared.styles import COLORS
+from .shared.styles import COLORS, build_qss, set_theme
 from .shared.toast import show_toast
 from .shared.widgets import SidebarButton
 
 
 class MainWindow(QMainWindow):
-    """Ventana principal de la aplicación Zorma."""
-
     def __init__(
         self,
         data_dir: Optional[Path] = None,
         watcher_service: Optional[WatcherService] = None,
-        rule_repository: Optional[RuleRepository] = None,
+        rule_repository: Optional[ZormaRepository] = None,
         undo_manager: Optional[UndoManager] = None,
     ) -> None:
-        """Inicializa la ventana principal.
-
-        Args:
-            data_dir: Directorio de datos.
-            watcher_service: Servicio de monitorización.
-            rule_repository: Repositorio de reglas.
-            undo_manager: Gestor de deshacer.
-        """
         super().__init__()
         self._data_dir = data_dir or Path.home() / ".zorma"
         self._watcher_service = watcher_service
@@ -58,6 +51,15 @@ class MainWindow(QMainWindow):
         self._tray_icon: Optional[QSystemTrayIcon] = None
         self._dashboard_view: Optional[DashboardView] = None
         self._settings_view: Optional[SettingsView] = None
+        self._theme_btn: Optional[QPushButton] = None
+
+        self._theme = self._rule_repository.get_theme() if self._rule_repository else "dark"
+        if self._theme == "light":
+            set_theme("light")
+            app = QApplication.instance()
+            if app is not None:
+                app.setStyleSheet(build_qss())
+
         self._setup_ui()
         self._setup_shortcuts()
         self._setup_tray()
@@ -66,7 +68,6 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(QIcon(str(icon_path)))
 
     def _setup_ui(self) -> None:
-        """Configura la interfaz de usuario principal."""
         self.setWindowTitle(APP_NAME)
         self.setMinimumSize(1024, 680)
         self.resize(1280, 800)
@@ -81,11 +82,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._build_content(), 1)
 
     def _build_sidebar(self) -> QFrame:
-        """Construye la barra lateral de la aplicación.
-
-        Returns:
-            QFrame: El frame de la barra lateral.
-        """
         sidebar = self._create_sidebar_frame()
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(12, 20, 12, 20)
@@ -111,11 +107,6 @@ class MainWindow(QMainWindow):
         return sidebar
 
     def _create_sidebar_frame(self) -> QFrame:
-        """Crea el frame base para la barra lateral.
-
-        Returns:
-            QFrame: Frame configurado para la barra lateral.
-        """
         sidebar = QFrame()
         sidebar.setFixedWidth(220)
         sidebar.setStyleSheet(
@@ -124,11 +115,6 @@ class MainWindow(QMainWindow):
         return sidebar
 
     def _create_logo(self) -> QLabel:
-        """Crea el label del logo.
-
-        Returns:
-            QLabel: Label con el nombre de la aplicación.
-        """
         logo = QLabel(APP_NAME)
         logo.setStyleSheet(
             f"color: {COLORS['text_bright']}; font-size: 22px; font-weight: 800; padding: 0 12px 20px 12px;"
@@ -136,11 +122,6 @@ class MainWindow(QMainWindow):
         return logo
 
     def _create_nav_items(self, layout: QVBoxLayout) -> None:
-        """Crea y añade los botones de navegación al layout.
-
-        Args:
-            layout: Layout donde añadir los botones.
-        """
         nav_items = [
             ("Inicio", "dashboard.svg"),
             ("Reglas", "rules.svg"),
@@ -156,11 +137,6 @@ class MainWindow(QMainWindow):
             layout.addWidget(btn)
 
     def _create_status_label(self) -> QLabel:
-        """Crea el label de estado.
-
-        Returns:
-            QLabel: Label de estado configurado.
-        """
         self._status_label = QLabel("● Monitor detenido")
         self._status_label.setStyleSheet(
             f"color: {COLORS['error']}; font-size: 12px; font-weight: 600; padding: 12px;"
@@ -168,7 +144,6 @@ class MainWindow(QMainWindow):
         return self._status_label
 
     def _init_views(self) -> None:
-        """Inicializa las vistas de la aplicación."""
         self._rules_view = RulesView(self._data_dir, self._rule_repository)
 
         self._dashboard_view = DashboardView(
@@ -182,32 +157,85 @@ class MainWindow(QMainWindow):
         self._history_view = HistoryView(self._data_dir)
 
     def _build_content(self) -> QFrame:
-        """Construye el área de contenido principal.
-
-        Returns:
-            QFrame: El frame del contenido.
-        """
         content = QFrame()
         content.setStyleSheet(f"background-color: {COLORS['bg']};")
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.addWidget(self._nav_stack)
+        content_layout.setSpacing(0)
+
+        top_bar = QFrame()
+        top_bar.setFixedHeight(36)
+        top_bar.setStyleSheet("background: transparent;")
+        bar_layout = QHBoxLayout(top_bar)
+        bar_layout.setContentsMargins(0, 0, 8, 0)
+        bar_layout.addStretch()
+
+        self._theme_btn = QPushButton("☀" if self._theme == "light" else "☾")
+        self._theme_btn.setFixedSize(30, 30)
+        self._theme_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._theme_btn.setToolTip("Cambiar tema claro/oscuro")
+        self._theme_btn.setAccessibleName("Cambiar tema")
+        self._theme_btn.clicked.connect(self._toggle_theme)
+        self._theme_btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: transparent;
+                color: {COLORS['text']};
+                border: 1px solid {COLORS['border']};
+                border-radius: 6px;
+                font-size: 16px;
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS['card_hover']};
+                border-color: {COLORS['border_light']};
+            }}
+            """
+        )
+        bar_layout.addWidget(self._theme_btn)
+        content_layout.addWidget(top_bar)
+
+        content_layout.addWidget(self._nav_stack, 1)
         return content
 
     def _setup_shortcuts(self) -> None:
-        """Configura los atajos de teclado."""
         if self._undo_manager is not None:
             QShortcut(QKeySequence.StandardKey.Undo, self, self._undo_shortcut)
+            QShortcut(QKeySequence.StandardKey.Redo, self, self._redo_shortcut)
+
+        QShortcut(QKeySequence("Ctrl+N"), self, self._new_rule_shortcut)
+        QShortcut(QKeySequence(QKeySequence.StandardKey.Close), self, self._ctrl_w_shortcut)
+        QShortcut(QKeySequence("F5"), self, self._refresh_shortcut)
+
+        for i in range(4):
+            QShortcut(QKeySequence(f"Ctrl+{i+1}"), self, lambda checked, idx=i: self._navigate(idx))
 
     def _undo_shortcut(self) -> None:
-        """Manejador para el atajo de deshacer."""
         if self._undo_manager is not None:
             result = self._undo_manager.undo()
             if result is not None:
                 show_toast("↩ Archivo restaurado exitosamente", COLORS["success"])
 
+    def _redo_shortcut(self) -> None:
+        if self._undo_manager is not None:
+            result = self._undo_manager.redo()
+            if result is not None:
+                show_toast("↪ Archivo reclasificado exitosamente", COLORS["success"])
+
+    def _new_rule_shortcut(self) -> None:
+        self._navigate(1)
+        self._rules_view._new_rule()
+
+    def _ctrl_w_shortcut(self) -> None:
+        self.close()
+
+    def _refresh_shortcut(self) -> None:
+        idx = self._nav_stack.currentIndex()
+        if idx == 0:
+            self._dashboard_view.run_scan()
+        elif idx == 1:
+            self._rules_view._load_rules()
+
     def _setup_tray(self) -> None:
-        """Configura el icono de la bandeja del sistema."""
         self._tray_icon = QSystemTrayIcon(self)
         self._tray_icon.setToolTip(APP_NAME)
         icon_path = ICONS_DIR / "tray_icon.svg"
@@ -238,7 +266,6 @@ class MainWindow(QMainWindow):
         self._tray_icon.show()
 
     def _toggle_visibility(self) -> None:
-        """Alterna la visibilidad de la ventana."""
         if self.isVisible():
             self.hide()
         else:
@@ -246,21 +273,11 @@ class MainWindow(QMainWindow):
             self.raise_()
             self.activateWindow()
 
-    def _on_tray_activated(self, reason: int) -> None:
-        """Manejador para la activación del icono de la bandeja.
-
-        Args:
-            reason: Motivo de la activación.
-        """
-        if reason == 3:
+    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self._toggle_visibility()
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
-        """Maneja el evento de cierre de la ventana.
-
-        Args:
-            event: El evento de cierre.
-        """
         if event is None:
             return
         if self._tray_icon is not None and self._tray_icon.isVisible():
@@ -270,24 +287,59 @@ class MainWindow(QMainWindow):
             event.accept()
 
     def _navigate(self, index: int) -> None:
-        """Navega a la vista especificada.
-
-        Args:
-            index: Índice de la vista a mostrar.
-        """
         for i, btn in enumerate(self._nav_buttons):
             btn.set_active(i == index)
-        self._nav_stack.setCurrentIndex(index)
+
+        widget = self._nav_stack.widget(index)
+        if widget is not None:
+            old_effect = widget.graphicsEffect()
+            if old_effect is not None:
+                old_effect.deleteLater()
+            effect = QGraphicsOpacityEffect(widget)
+            effect.setOpacity(0.0)
+            widget.setGraphicsEffect(effect)
+
+            self._nav_stack.setCurrentIndex(index)
+
+            anim = QPropertyAnimation(effect, b"opacity")
+            anim.setDuration(150)
+            anim.setStartValue(0.0)
+            anim.setEndValue(1.0)
+            anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
 
     def _on_watcher_status(self, text: str, color: str) -> None:
-        """Actualiza el estado del monitor.
-
-        Args:
-            text: Texto del estado.
-            color: Color del estado.
-        """
         if self._status_label is not None:
             self._status_label.setText(text)
             self._status_label.setStyleSheet(
                 f"color: {color}; font-size: 12px; font-weight: 600; padding: 12px;"
             )
+
+    def _on_theme_changed(self, theme: str) -> None:
+        if self._theme_btn is not None:
+            self._theme_btn.setText("☀" if theme == "light" else "☾")
+            self._theme_btn.setStyleSheet(
+                f"""
+                QPushButton {{
+                    background-color: transparent;
+                    color: {COLORS['text']};
+                    border: 1px solid {COLORS['border']};
+                    border-radius: 6px;
+                    font-size: 16px;
+                }}
+                QPushButton:hover {{
+                    background-color: {COLORS['card_hover']};
+                    border-color: {COLORS['border_light']};
+                }}
+                """
+            )
+
+    def _toggle_theme(self) -> None:
+        new = "light" if self._theme == "dark" else "dark"
+        self._theme = new
+        set_theme(new)
+        app = QApplication.instance()
+        if app is not None:
+            app.setStyleSheet(build_qss())
+        if self._rule_repository:
+            self._rule_repository.set_theme(new)
+        self._on_theme_changed(new)
