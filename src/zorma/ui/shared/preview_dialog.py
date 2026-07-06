@@ -7,6 +7,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QHBoxLayout,
     QHeaderView,
@@ -43,8 +44,9 @@ class PreviewDialog(QDialog):
         self._results = results
         self._watch_path = watch_path
         self._row_checks: List[QCheckBox] = []
+        self._row_combos: List[Optional[QComboBox]] = []
         self.setWindowTitle("Vista Previa — Modo Activo")
-        self.setMinimumSize(850, 600)
+        self.setMinimumSize(950, 600)
         self.setModal(True)
         self._setup_ui()
 
@@ -112,9 +114,9 @@ class PreviewDialog(QDialog):
         select_row.addWidget(self._selection_count)
         layout.addLayout(select_row)
 
-        self._table = QTableWidget(0, 6)
+        self._table = QTableWidget(0, 7)
         self._table.setHorizontalHeaderLabels(
-            ["", "Archivo", "Regla", "Acción", "Destino", "Tamaño"]
+            ["", "Archivo", "Regla", "Acción", "Destino", "Tamaño", "Resolución"]
         )
         hdr = self._table.horizontalHeader()
         if hdr is not None:
@@ -122,10 +124,12 @@ class PreviewDialog(QDialog):
             hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
             hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
             hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+            hdr.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)
         self._table.setColumnWidth(0, 36)
         self._table.setColumnWidth(2, 140)
         self._table.setColumnWidth(3, 90)
         self._table.setColumnWidth(5, 80)
+        self._table.setColumnWidth(6, 120)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         vhdr = self._table.verticalHeader()
@@ -137,7 +141,7 @@ class PreviewDialog(QDialog):
         self._update_selection_count()
 
         if conflicts:
-            warn = QLabel(f"⚠ {conflicts} conflicto(s) detectados — resaltados en rojo")
+            warn = QLabel(f"⚠ {conflicts} conflicto(s) detectados — use la columna Resolución")
             warn.setStyleSheet(f"color: {COLORS['warning']}; font-size: 12px; font-weight: 600;")
             layout.addWidget(warn)
 
@@ -202,13 +206,36 @@ class PreviewDialog(QDialog):
             self._table.setItem(row, 5, QTableWidgetItem(size_str))
 
             if r.status == ClassificationStatus.CONFLICT:
-                for col in range(1, 6):
+                combo = QComboBox()
+                combo.addItems(["Sobrescribir", "Omitir"])
+                combo.setCurrentIndex(1)
+                combo.currentIndexChanged.connect(
+                    lambda idx, r_idx=row: self._on_resolution_changed(r_idx, idx)
+                )
+                self._table.setCellWidget(row, 6, combo)
+                self._row_combos.append(combo)
+                for col in range(1, 7):
                     item = self._table.item(row, col)
                     if item is not None:
                         item.setBackground(QColor(COLORS["error"] + "40"))
+            else:
+                self._table.setItem(row, 6, QTableWidgetItem("—"))
+                self._row_combos.append(None)
+
+    def _on_resolution_changed(self, row: int, index: int) -> None:
+        if row < len(self._row_checks):
+            cb = self._row_checks[row]
+            cb.blockSignals(True)
+            cb.setChecked(index == 0)
+            cb.blockSignals(False)
+            self._update_selection_count()
 
     def _select_all(self) -> None:
-        for cb in self._row_checks:
+        for i, cb in enumerate(self._row_checks):
+            if self._row_combos[i] is not None:
+                self._row_combos[i].blockSignals(True)
+                self._row_combos[i].setCurrentIndex(0)
+                self._row_combos[i].blockSignals(False)
             cb.setChecked(True)
 
     def _deselect_all(self) -> None:
@@ -221,6 +248,11 @@ class PreviewDialog(QDialog):
                 ClassificationStatus.SUCCESS,
                 ClassificationStatus.CONFLICT,
             )
+            should_check = r.status != ClassificationStatus.CONFLICT and is_actionable
+            if self._row_combos[i] is not None:
+                self._row_combos[i].blockSignals(True)
+                self._row_combos[i].setCurrentIndex(0 if should_check else 1)
+                self._row_combos[i].blockSignals(False)
             self._row_checks[i].setChecked(is_actionable)
 
     def _update_selection_count(self) -> None:
@@ -228,4 +260,10 @@ class PreviewDialog(QDialog):
         self._selection_count.setText(f"{count} seleccionados")
 
     def get_selected_results(self) -> List[ClassificationResult]:
-        return [r for r, cb in zip(self._results, self._row_checks) if cb.isChecked()]
+        selected = []
+        for r, cb, combo in zip(self._results, self._row_checks, self._row_combos):
+            if cb.isChecked():
+                if combo is not None:
+                    r.overwrite = combo.currentIndex() == 0
+                selected.append(r)
+        return selected

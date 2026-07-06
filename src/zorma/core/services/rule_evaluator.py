@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import fnmatch
+import logging
 import re
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from ..models.rule import ConditionType, Rule
 
+logger = logging.getLogger(__name__)
+
 
 class RuleEvaluator:
+
     MATCH_ALL_EXTENSIONS = "*"
     _SIZE_RE = re.compile(r"(<=?|>=?|==?)\s*(\d+)\s*(KB|MB|GB)?", re.IGNORECASE)
-    _DATE_RE = re.compile(r"(<|>|==?)\s*(\d+)\s*(days|hours|minutes)?", re.IGNORECASE)
+    _DATE_RE = re.compile(r"(<|>|==?)\s*(\d+)\s*(days|hours|minutes|días|dias|horas|hora|minutos|minuto)?", re.IGNORECASE)
     _SIZE_MULTIPLIERS = {"KB": 1024, "MB": 1024**2, "GB": 1024**3}
 
     def evaluate(self, file: Path, rule: Rule) -> bool:
@@ -29,8 +33,10 @@ class RuleEvaluator:
             if fn is None:
                 return False
             return fn(file, rule.condition_value)
-        except Exception:
+        except (OSError, ValueError, TypeError) as e:
+            logger.warning("Error evaluating rule %s on %s: %s", rule.id, file, e)
             return False
+
 
     def evaluate_all(self, file: Path, rules: list[Rule]) -> list[Rule]:
         matched: list[Rule] = []
@@ -77,12 +83,17 @@ class RuleEvaluator:
         if not match:
             return False
         op, amount, unit = match.groups()
-        delta_map = {"days": "days", "hours": "hours", "minutes": "minutes"}
+        if unit is None: unit = "days"
+        delta_map = {
+            "days": "days", "días": "days", "dias": "days",
+            "hours": "hours", "horas": "hours", "hora": "hours",
+            "minutes": "minutes", "minutos": "minutes", "minuto": "minutes"
+        }
         kw = {delta_map.get(unit.lower(), "days"): int(amount)}
-        cutoff = datetime.now() - timedelta(**kw)
+        cutoff = datetime.now(timezone.utc) - timedelta(**kw)
 
         try:
-            file_mtime = datetime.fromtimestamp(file.stat().st_mtime)
+            file_mtime = datetime.fromtimestamp(file.stat().st_mtime, tz=timezone.utc)
         except OSError:
             return False
         # "<1 days" means age < 1 day → file_mtime > cutoff (more recent)

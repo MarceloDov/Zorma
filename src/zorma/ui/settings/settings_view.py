@@ -18,8 +18,9 @@ from PyQt6.QtWidgets import (
 )
 
 from ...config.settings import DEFAULT_DISK_ALERT_THRESHOLD, DISK_CHECK_INTERVAL
-from ...core.ports.notification_service import NotificationService, NotificationUrgency
-from ..shared.styles import COLORS, FONT_SIZES, SPACING, btn_primary
+from ...adapters.notifications.pyqt_notification_adapter import PyQtNotificationAdapter
+from ...core.models.notification_urgency import NotificationUrgency
+from ..shared.styles import COLORS, FONT_SIZES, SPACING, btn_primary, card_disk
 from ..shared.toast import show_toast
 from ..shared.widgets import Card
 
@@ -29,7 +30,7 @@ class SettingsView(QWidget):
         super().__init__()
         self._data_dir = data_dir or Path.home() / ".zorma"
         self._config_file = self._data_dir / "app_config.json"
-        self._notification_service: Optional[NotificationService] = None
+        self._notification_service: Optional[PyQtNotificationAdapter] = None
         self._disk_threshold = DEFAULT_DISK_ALERT_THRESHOLD
         self._notifications_enabled = True
         self._sound_enabled = True
@@ -43,7 +44,7 @@ class SettingsView(QWidget):
         self._setup_ui()
         self._check_disk_space()
 
-    def set_notification_service(self, service: NotificationService) -> None:
+    def set_notification_service(self, service: PyQtNotificationAdapter) -> None:
         self._notification_service = service
 
     def _load_config(self) -> None:
@@ -171,19 +172,12 @@ class SettingsView(QWidget):
                 self._no_alerts_label.setStyleSheet(
                     f"color: {COLORS['warning']}; font-size: {FONT_SIZES['md']}; padding: {SPACING['xl']}px;"
                 )
-                self._disk_card.setStyleSheet("""
-                    QFrame#card {
-                        background-color: #1e1e2e;
-                        border: 1px solid #f38ba8;
-                        border-radius: 12px;
-                        border-bottom: 3px solid #f38ba8;
-                    }
-                """)
+                self._disk_card.setStyleSheet(card_disk("warning"))
                 if self._notification_service is not None:
                     drive = getattr(Path.home(), "drive", "system")
                     self._notification_service.notify(
-                        "Low Disk Space",
-                        f"Only {free_gb:.1f} GB remaining on {drive} drive.",
+                        "Espacio de disco bajo",
+                        f"Solo {free_gb:.1f} GB restantes en la unidad {drive}.",
                         NotificationUrgency.CRITICAL,
                     )
             else:
@@ -192,14 +186,7 @@ class SettingsView(QWidget):
                 self._no_alerts_label.setStyleSheet(
                     f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['md']}; padding: {SPACING['xl']}px;"
                 )
-                self._disk_card.setStyleSheet("""
-                    QFrame#card {
-                        background-color: #1e1e2e;
-                        border: 1px solid #313244;
-                        border-radius: 12px;
-                        border-bottom: 3px solid #89b4fa;
-                    }
-                """)
+                self._disk_card.setStyleSheet(card_disk("normal"))
         except OSError:
             self._disk_card.update_value("Desconocido")
 

@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+import logging
 import shutil
 from pathlib import Path
 
 from ..models.classification import ClassificationResult, ClassificationStatus
 from ..models.rule import ActionType, RuleAction
 
+logger = logging.getLogger(__name__)
+
 
 class ActionExecutor:
     """Ejecuta las acciones definidas en las reglas sobre archivos específicos."""
 
-    def execute(self, action: RuleAction, file: Path) -> ClassificationResult:
+    def execute(self, action: RuleAction, file: Path, overwrite: bool = False) -> ClassificationResult:
         """Ejecuta una acción sobre el archivo dado y retorna el resultado."""
+        dest_str = str(self._resolve_destination(action, file)) if file.exists() else "(not found)"
+        logger.info("%s %s → %s", action.action_type.value, file, dest_str)
         result = ClassificationResult(
             file_name=file.name,
             source_path=file,
@@ -22,7 +27,10 @@ class ActionExecutor:
 
             dest = self._resolve_destination(action, file)
             if dest.exists():
-                return self._skipped(result, f"Destination exists: {dest}")
+                if overwrite:
+                    dest.unlink()
+                else:
+                    return self._skipped(result, f"Destination exists: {dest}")
 
             if action.action_type in (ActionType.MOVE, ActionType.COPY):
                 dest.parent.mkdir(parents=True, exist_ok=True)
@@ -37,9 +45,11 @@ class ActionExecutor:
             result.status = ClassificationStatus.SUCCESS
 
         except PermissionError as e:
+            logger.warning("Permission denied %s: %s", file, e)
             result.status = ClassificationStatus.ERROR
             result.error_message = f"PERMISSION_DENIED: {e}"
         except OSError as e:
+            logger.error("OSError %d on %s: %s", e.errno, file, e)
             if e.errno == 28:
                 result.status = ClassificationStatus.ERROR
                 result.error_message = f"DISK_FULL: {e}"
@@ -50,6 +60,7 @@ class ActionExecutor:
 
     def rollback(self, action: RuleAction, file: Path, original: Path) -> ClassificationResult:
         """Revierte una acción realizada sobre un archivo."""
+        logger.info("rollback %s → %s", file, original)
         result = ClassificationResult(
             file_name=file.name,
             source_path=original,
@@ -58,8 +69,10 @@ class ActionExecutor:
             if not file.exists():
                 return self._error(result, f"File to rollback not found: {file}")
             dst = original
-            if action.action_type in (ActionType.MOVE, ActionType.COPY):
+            if action.action_type == ActionType.MOVE:
                 shutil.move(str(file), str(dst))
+            elif action.action_type == ActionType.COPY:
+                file.unlink()
             elif action.action_type == ActionType.RENAME:
                 file.rename(dst)
             result.destination_path = dst
@@ -72,7 +85,10 @@ class ActionExecutor:
     def check_conflict(self, action: RuleAction, file: Path) -> tuple[bool, Path]:
         """Verifica si existe un conflicto de destino para una acción."""
         dest = self._resolve_destination(action, file)
-        return dest.exists(), dest
+        conflict = dest.exists()
+        if conflict:
+            logger.info("conflict %s → %s", file, dest)
+        return conflict, dest
 
     def _resolve_destination(self, action: RuleAction, file: Path) -> Path:
         """Resuelve la ruta de destino basándose en la acción y el archivo."""
@@ -101,8 +117,8 @@ class ActionExecutor:
         if not target_str:
             raise ValueError("Target folder cannot be empty")
 
-        ext_no_dot = file.suffix[1:].lower() if file.suffix else "varios"
-        target_str = target_str.replace("{ext}", ext_no_dot)
+        ext_str = file.suffix.lower() if file.suffix else "varios"
+        target_str = target_str.replace("{ext}", ext_str)
         raw = Path(target_str)
 
         # Validaciones de seguridad de ruta
@@ -123,7 +139,8 @@ class ActionExecutor:
     def _apply_rename_pattern(self, action: RuleAction, file: Path) -> str:
         """Aplica el patrón de renombrado configurado en la regla."""
         pattern = action.rename_pattern or file.stem
-        new_name = pattern.replace("{name}", file.stem).replace("{ext}", file.suffix)
-        if not new_name.endswith(file.suffix):
-            new_name = f"{new_name}{file.suffix}"
+        ext = file.suffix.lower()
+        new_name = pattern.replace("{name}", file.stem).replace("{ext}", ext)
+        if not new_name.endswith(ext):
+            new_name = f"{new_name}{ext}"
         return new_name

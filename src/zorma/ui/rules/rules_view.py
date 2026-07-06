@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -18,27 +18,59 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ...adapters.persistence.zorma_repository import ZormaRepository
 from ...core.models.rule import ActionType, ConditionType, Rule, RuleAction
-from ...core.ports.rule_repository import RuleRepository
 from ..shared.styles import COLORS, FONT_SIZES, SPACING, btn_error, btn_primary
 from ..shared.toast import show_toast
+from ..shared.widgets import EmptyState
 from .rule_dialog import RuleDialog
+from .rules_viewmodel import RulesViewModel
+
+
+class RulesTable(QTableWidget):
+    def __init__(self, view: RulesView) -> None:
+        super().__init__(0, 7)
+        self._view = view
+
+    def dropEvent(self, event: QAbstractItemView.DropEvent) -> None:
+        super().dropEvent(event)
+        if self._view is not None:
+            self._view._on_rows_reordered()
 
 
 class RulesView(QWidget):
-    def __init__(self, data_dir: Optional[Path] = None, repo: Optional[RuleRepository] = None) -> None:
+    def __init__(self, data_dir: Optional[Path] = None, repo: Optional[ZormaRepository] = None) -> None:
         super().__init__()
-        self._data_dir = data_dir
-        self._repo = repo
-        self._rules_list: List[Rule] = []
+        self._vm = RulesViewModel(repo)
         self._setup_ui()
+        self._connect_vm()
+        if repo is not None:
+            self._vm.load_rules()
 
-    def set_repository(self, repo: RuleRepository) -> None:
-        self._repo = repo
-        self._load_rules()
+    def set_repository(self, repo: ZormaRepository) -> None:
+        self._vm.set_repository(repo)
+
+    def _connect_vm(self) -> None:
+        self._vm.rules_changed.connect(self._on_rules_changed)
+        self._vm.toast_requested.connect(show_toast)
+
+    def _load_rules(self) -> None:
+        self._vm.load_rules()
+
+    def _on_rules_changed(self, rules: list[Rule]) -> None:
+        self._table.setRowCount(0)
+        if not rules:
+            self._table.hide()
+            self._empty_state.show()
+        else:
+            self._table.show()
+            self._empty_state.hide()
+            for i, rule in enumerate(rules):
+                actions = self._vm.get_actions_for_rule(rule.id)
+                action = actions[0] if actions else None
+                self._add_rule_row(i, rule, action)
 
     def _setup_ui(self) -> None:
-        """Configura la interfaz de usuario de las reglas."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING["3xl"], SPACING["xl"], SPACING["3xl"], SPACING["xl"])
         layout.setSpacing(SPACING["lg"])
@@ -49,11 +81,6 @@ class RulesView(QWidget):
         layout.addWidget(self._create_empty_label())
 
     def _create_header(self) -> QHBoxLayout:
-        """Crea el layout del encabezado.
-
-        Returns:
-            QHBoxLayout: Layout con título y botones.
-        """
         header_row = QHBoxLayout()
         header = QLabel("Reglas de Clasificación")
         header.setStyleSheet(f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['2xl']}; font-weight: 700;")
@@ -62,6 +89,7 @@ class RulesView(QWidget):
         self._add_btn = QPushButton("+ Nueva Regla")
         self._add_btn.setStyleSheet(btn_primary())
         self._add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._add_btn.setAccessibleName("Nueva regla")
         self._add_btn.clicked.connect(self._new_rule)
         header_row.addStretch()
         header_row.addWidget(self._add_btn)
@@ -69,16 +97,12 @@ class RulesView(QWidget):
         self._delete_btn = QPushButton("Eliminar Seleccionada")
         self._delete_btn.setStyleSheet(btn_error())
         self._delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._delete_btn.setAccessibleName("Eliminar regla seleccionada")
         self._delete_btn.clicked.connect(self._delete_selected)
         header_row.addWidget(self._delete_btn)
         return header_row
 
     def _create_description(self) -> QLabel:
-        """Crea el label de descripción.
-
-        Returns:
-            QLabel: Label con la descripción.
-        """
         info = QLabel(
             "Defina reglas para organizar sus archivos automáticamente "
             "por extensión, tamaño, fecha o nombre."
@@ -88,25 +112,26 @@ class RulesView(QWidget):
         return info
 
     def _create_table(self) -> QTableWidget:
-        """Crea la tabla de reglas.
-
-        Returns:
-            QTableWidget: Tabla configurada.
-        """
-        self._table = QTableWidget(0, 6)
-        self._table.setHorizontalHeaderLabels(["Nombre", "Tipo", "Condición", "Acción", "Destino", "Estado"])
+        self._table = RulesTable(self)
+        self._table.setHorizontalHeaderLabels(["#", "Nombre", "Tipo", "Condición", "Acción", "Destino", "Estado"])
         hdr = self._table.horizontalHeader()
         if hdr is not None:
             hdr.setStretchLastSection(True)
-            hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-            hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
-        self._table.setColumnWidth(1, 100)
-        self._table.setColumnWidth(2, 150)
-        self._table.setColumnWidth(3, 100)
-        self._table.setColumnWidth(5, 80)
+            hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+        self._table.setColumnWidth(0, 36)
+        self._table.setColumnWidth(2, 100)
+        self._table.setColumnWidth(3, 150)
+        self._table.setColumnWidth(4, 100)
+        self._table.setColumnWidth(6, 80)
         self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._table.setAlternatingRowColors(True)
+        self._table.setDragEnabled(True)
+        self._table.setAcceptDrops(True)
+        self._table.setDropIndicatorShown(True)
+        self._table.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self._table.setDragDropOverwriteMode(False)
         self._table.setStyleSheet(f"""
             QTableWidget {{
                 alternate-background-color: {COLORS["bg2"]};
@@ -115,42 +140,25 @@ class RulesView(QWidget):
         self._table.doubleClicked.connect(self._edit_selected)
         return self._table
 
-    def _create_empty_label(self) -> QLabel:
-        """Crea el label para cuando no hay reglas.
-
-        Returns:
-            QLabel: Label de estado vacío.
-        """
-        self._empty_label = QLabel("Sin reglas definidas.\nHaga clic en '+ Nueva Regla' para crear una.")
-        self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._empty_label.setStyleSheet(
-            f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['md']}; padding: {SPACING['3xl']};"
+    def _create_empty_label(self) -> EmptyState:
+        self._empty_state = EmptyState(
+            icon="📝",
+            title="Sin reglas definidas",
+            description="Cree su primera regla para empezar a clasificar archivos automáticamente.",
+            button_text="+ Primera regla",
         )
-        self._empty_label.setWordWrap(True)
-        return self._empty_label
+        self._empty_state.set_button_callback(self._new_rule)
+        return self._empty_state
 
-    def _load_rules(self) -> None:
-        if self._repo is None:
-            return
-        self._rules_list = self._repo.get_all()
-        self._table.setRowCount(0)
-
-        if not self._rules_list:
-            self._table.hide()
-            self._empty_label.show()
-        else:
-            self._table.show()
-            self._empty_label.hide()
-            for rule in self._rules_list:
-                actions = self._repo.get_actions_for_rule(rule.id)
-                action = actions[0] if actions else None
-                self._add_rule_row(rule, action)
-
-    def _add_rule_row(self, rule: Rule, action: Optional[RuleAction]) -> None:
-        row = self._table.rowCount()
+    def _add_rule_row(self, row: int, rule: Rule, action: Optional[RuleAction]) -> None:
         self._table.insertRow(row)
 
-        self._table.setItem(row, 0, QTableWidgetItem(rule.name))
+        num_item = QTableWidgetItem(str(row + 1))
+        num_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        num_item.setData(Qt.ItemDataRole.UserRole, rule.id)
+        self._table.setItem(row, 0, num_item)
+
+        self._table.setItem(row, 1, QTableWidgetItem(rule.name))
 
         type_labels = {
             ConditionType.EXTENSION: "Extensión",
@@ -158,9 +166,9 @@ class RulesView(QWidget):
             ConditionType.DATE: "Fecha",
             ConditionType.NAME: "Nombre",
         }
-        self._table.setItem(row, 1, QTableWidgetItem(type_labels.get(rule.condition_type, "")))
+        self._table.setItem(row, 2, QTableWidgetItem(type_labels.get(rule.condition_type, "")))
 
-        self._table.setItem(row, 2, QTableWidgetItem(rule.condition_value))
+        self._table.setItem(row, 3, QTableWidgetItem(rule.condition_value))
 
         action_text = ""
         target = ""
@@ -172,37 +180,16 @@ class RulesView(QWidget):
             }
             action_text = action_labels.get(action.action_type, "")
             target = action.target_folder
-        self._table.setItem(row, 3, QTableWidgetItem(action_text))
-        self._table.setItem(row, 4, QTableWidgetItem(target))
-        self._table.setItem(row, 5, QTableWidgetItem("Activa" if rule.enabled else "Desactivada"))
-
-        item = self._table.item(row, 0)
-        if item is not None:
-            item.setData(Qt.ItemDataRole.UserRole, rule.id)
-
-    def _find_rule_by_id(self, rule_id: str) -> Optional[Rule]:
-        for r in self._rules_list:
-            if r.id == rule_id:
-                return r
-        return None
+        self._table.setItem(row, 4, QTableWidgetItem(action_text))
+        self._table.setItem(row, 5, QTableWidgetItem(target))
+        self._table.setItem(row, 6, QTableWidgetItem("Activa" if rule.enabled else "Desactivada"))
 
     def _new_rule(self) -> None:
-        if self._repo is None:
-            return
         dlg = RuleDialog(self)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.result_rule is not None:
-            rule = dlg.result_rule
-            action = dlg.result_action
-            self._repo.save(rule)
-            if action is not None:
-                action.rule_id = rule.id
-                self._repo.save_action(action)
-            self._load_rules()
-            show_toast(f"✓ Regla '{rule.name}' creada", COLORS["success"])
+            self._vm.create_rule(dlg.result_rule, dlg.result_action)
 
     def _edit_selected(self) -> None:
-        if self._repo is None:
-            return
         row = self._table.currentRow()
         if row < 0:
             return
@@ -210,26 +197,21 @@ class RulesView(QWidget):
         if item is None:
             return
         rule_id = item.data(Qt.ItemDataRole.UserRole)
-        rule = self._find_rule_by_id(rule_id)
+        if not isinstance(rule_id, str):
+            return
+        rule = self._vm.find_rule_by_id(rule_id)
         if rule is None:
             return
-        actions = self._repo.get_actions_for_rule(rule.id)
+        actions = self._vm.get_actions_for_rule(rule.id)
         action = actions[0] if actions else None
 
         dlg = RuleDialog(self, rule=rule, action=action)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.result_rule is not None:
             edited = dlg.result_rule
             edited.id = rule.id
-            self._repo.save(edited)
-            if dlg.result_action is not None:
-                dlg.result_action.rule_id = rule.id
-                self._repo.save_action(dlg.result_action)
-            self._load_rules()
-            show_toast(f"✓ Regla '{rule.name}' actualizada", COLORS["success"])
+            self._vm.update_rule(edited, dlg.result_action)
 
     def _delete_selected(self) -> None:
-        if self._repo is None:
-            return
         row = self._table.currentRow()
         if row < 0:
             return
@@ -237,7 +219,9 @@ class RulesView(QWidget):
         if item is None:
             return
         rule_id = item.data(Qt.ItemDataRole.UserRole)
-        rule = self._find_rule_by_id(rule_id)
+        if not isinstance(rule_id, str):
+            return
+        rule = self._vm.find_rule_by_id(rule_id)
         if rule is None:
             return
 
@@ -249,6 +233,19 @@ class RulesView(QWidget):
             QMessageBox.StandardButton.No,
         )
         if confirm == QMessageBox.StandardButton.Yes:
-            self._repo.delete(rule_id)
-            self._load_rules()
-            show_toast(f"🗑 Regla '{rule.name}' eliminada", COLORS["warning"])
+            self._vm.delete_rule(rule_id, rule.name)
+
+    def _reorder_rules(self) -> list[tuple[str, int]]:
+        pairs: list[tuple[str, int]] = []
+        for row in range(self._table.rowCount()):
+            item = self._table.item(row, 0)
+            if item is None:
+                continue
+            rule_id = item.data(Qt.ItemDataRole.UserRole)
+            if isinstance(rule_id, str):
+                pairs.append((rule_id, row))
+        return pairs
+
+    def _on_rows_reordered(self) -> None:
+        pairs = self._reorder_rules()
+        self._vm.reorder_rules(pairs)

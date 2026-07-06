@@ -28,7 +28,7 @@ BORDER_RADIUS = {
     "xl": "16px",
 }
 
-COLORS = {
+_DARK_COLORS = {
     "bg": "#1e1e2e",
     "bg2": "#181825",
     "surface": "#242438",
@@ -37,6 +37,7 @@ COLORS = {
     "card_hover": "#313244",
     "primary": "#89b4fa",
     "primary_hover": "#74c7ec",
+    "primary_pressed": "#6a8fd8",
     "accent": "#cba6f7",
     "accent_hover": "#b4b0e6",
     "success": "#a6e3a1",
@@ -59,6 +60,47 @@ COLORS = {
     "overlay": "rgba(0, 0, 0, 0.5)",
 }
 
+_LIGHT_COLORS = {
+    "bg": "#eff1f5",
+    "bg2": "#e6e9ef",
+    "surface": "#ccd0da",
+    "sidebar": "#dce0e8",
+    "card": "#eff1f5",
+    "card_hover": "#ccd0da",
+    "primary": "#1e66f5",
+    "primary_hover": "#2a7cf6",
+    "primary_pressed": "#1a56d4",
+    "accent": "#8839ef",
+    "accent_hover": "#7287fd",
+    "success": "#40a02b",
+    "success_hover": "#359a24",
+    "warning": "#df8e1d",
+    "warning_hover": "#c97f1a",
+    "error": "#d20f39",
+    "error_hover": "#bc0d32",
+    "text": "#4c4f69",
+    "text_muted": "#9ca0b0",
+    "text_bright": "#1e1e2e",
+    "border": "#ccd0da",
+    "border_light": "#bcc0cc",
+    "border_accent": "#acb0be",
+    "scrollbar": "#bcc0cc",
+    "scrollbar_hover": "#acb0be",
+    "glass_bg": "rgba(239, 241, 245, 0.85)",
+    "glass_border": "rgba(30, 102, 245, 0.15)",
+    "shadow": "rgba(0, 0, 0, 0.1)",
+    "overlay": "rgba(0, 0, 0, 0.2)",
+}
+
+COLORS = dict(_DARK_COLORS)
+
+
+def set_theme(theme: str) -> None:
+    """Cambia la paleta activa y actualiza COLORS in-place."""
+    source = _DARK_COLORS if theme == "dark" else _LIGHT_COLORS
+    COLORS.clear()
+    COLORS.update(source)
+
 
 def btn_primary() -> str:
     return f"""
@@ -75,7 +117,7 @@ def btn_primary() -> str:
             background-color: {COLORS["primary_hover"]};
         }}
         QPushButton:pressed {{
-            background-color: #6a8fd8;
+            background-color: {COLORS["primary_pressed"]};
         }}
         QPushButton:disabled {{
             background-color: {COLORS["border"]};
@@ -105,27 +147,6 @@ def btn_secondary() -> str:
     """
 
 
-def btn_success() -> str:
-    return f"""
-        QPushButton {{
-            background-color: {COLORS["success"]};
-            color: {COLORS["bg"]};
-            border: none;
-            border-radius: {BORDER_RADIUS["sm"]};
-            padding: 10px 22px;
-            font-weight: 700;
-            font-size: {FONT_SIZES["base"]};
-        }}
-        QPushButton:hover {{
-            background-color: {COLORS["success_hover"]};
-        }}
-        QPushButton:disabled {{
-            background-color: {COLORS["border"]};
-            color: {COLORS["text_muted"]};
-        }}
-    """
-
-
 def btn_error() -> str:
     return f"""
         QPushButton {{
@@ -143,27 +164,6 @@ def btn_error() -> str:
     """
 
 
-def btn_warning() -> str:
-    return f"""
-        QPushButton {{
-            background-color: {COLORS["warning"]};
-            color: {COLORS["bg"]};
-            border: none;
-            border-radius: {BORDER_RADIUS["sm"]};
-            padding: 10px 22px;
-            font-weight: 700;
-            font-size: {FONT_SIZES["base"]};
-        }}
-        QPushButton:hover {{
-            background-color: {COLORS["warning_hover"]};
-        }}
-        QPushButton:disabled {{
-            background-color: {COLORS["border"]};
-            color: {COLORS["text_muted"]};
-        }}
-    """
-
-
 def btn_small(style: str = "secondary") -> str:
     base = {
         "secondary": btn_secondary(),
@@ -172,7 +172,37 @@ def btn_small(style: str = "secondary") -> str:
     return base.replace("padding: 10px 22px;", "padding: 6px 14px;font-size:12px;")
 
 
-DARK_THEME = f"""
+def hex_to_rgba(hex_color: str, alpha: float) -> str:
+    """Convierte un color hex #rrggbb a rgba(r, g, b, alpha).
+
+    Args:
+        hex_color: Color en formato #rrggbb.
+        alpha: Valor alpha entre 0 y 1.
+
+    Returns:
+        Cadena rgba lista para usar en QSS.
+    """
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
+def card_disk(state: str = "normal") -> str:
+    border = COLORS["error"] if state == "warning" else COLORS["border"]
+    bottom = COLORS["error"] if state == "warning" else COLORS["primary"]
+    return f"""
+        QFrame#card {{
+            background-color: {COLORS["card"]};
+            border: 1px solid {border};
+            border-radius: {BORDER_RADIUS["lg"]};
+            border-bottom: 3px solid {bottom};
+        }}
+    """
+
+
+def build_qss() -> str:
+    """Construye la hoja de estilos QSS usando la paleta COLORS activa."""
+    return f"""
 QMainWindow, QWidget {{
     background-color: {COLORS["bg"]};
     color: {COLORS["text"]};
@@ -423,5 +453,3 @@ QDialog {{
     background-color: {COLORS["bg"]};
 }}
 """
-
-LIGHT_THEME = ""

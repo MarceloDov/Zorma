@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from zorma.core.ports.file_watcher import FilterConfig
+from zorma.core.models.filter_config import FilterConfig
 
 
 class TestFilterConfig:

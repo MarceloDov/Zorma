@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ...core.models.classification import ClassificationResult
-from ..shared.styles import COLORS, FONT_SIZES, SPACING, btn_primary, btn_secondary
+from ..shared.styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, btn_primary, btn_secondary, hex_to_rgba
 
 
 class ConflictDialog(QDialog):
@@ -42,7 +42,7 @@ class ConflictDialog(QDialog):
 
         header_widget = QWidget()
         header_widget.setStyleSheet(
-            "background-color: rgba(249, 226, 175, 0.1); border-radius: 8px; padding: 4px;"
+            f"background-color: {hex_to_rgba(COLORS['warning'], 0.1)}; border-radius: {BORDER_RADIUS['md']}; padding: 4px;"
         )
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
@@ -80,7 +80,7 @@ class ConflictDialog(QDialog):
 
         self._populate()
 
-        self._overwrite_cb = QCheckBox("Sobrescribir todo (aplicar de todos modos)")
+        self._overwrite_cb = QCheckBox("Sobrescribir todo")
         self._overwrite_cb.toggled.connect(self._on_overwrite_toggle)
         layout.addWidget(self._overwrite_cb)
 
@@ -97,7 +97,7 @@ class ConflictDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         btn_row.addWidget(cancel_btn)
 
-        self._apply_btn = QPushButton("Aplicar Seleccionados")
+        self._apply_btn = QPushButton("Aplicar seleccionados")
         self._apply_btn.setStyleSheet(btn_primary())
         self._apply_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._apply_btn.clicked.connect(self.accept)
