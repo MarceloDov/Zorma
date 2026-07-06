@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self._dashboard_view: Optional[DashboardView] = None
         self._settings_view: Optional[SettingsView] = None
         self._theme_btn: Optional[QPushButton] = None
+        self._nav_anim: Optional[QPropertyAnimation] = None
 
         self._theme = self._rule_repository.get_theme() if self._rule_repository else "dark"
         if self._theme == "light":
@@ -287,6 +288,9 @@ class MainWindow(QMainWindow):
             event.accept()
 
     def _navigate(self, index: int) -> None:
+        if self._nav_stack.currentIndex() == index:
+            return
+
         for i, btn in enumerate(self._nav_buttons):
             btn.set_active(i == index)
 
@@ -294,18 +298,23 @@ class MainWindow(QMainWindow):
         if widget is not None:
             old_effect = widget.graphicsEffect()
             if old_effect is not None:
-                old_effect.deleteLater()
+                widget.setGraphicsEffect(None)
             effect = QGraphicsOpacityEffect(widget)
             effect.setOpacity(0.0)
             widget.setGraphicsEffect(effect)
 
             self._nav_stack.setCurrentIndex(index)
+            
+            # Ensure the widget is active and visible
+            widget.show()
+            widget.raise_()
+            widget.update()
 
-            anim = QPropertyAnimation(effect, b"opacity")
-            anim.setDuration(150)
-            anim.setStartValue(0.0)
-            anim.setEndValue(1.0)
-            anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+            self._nav_anim = QPropertyAnimation(effect, b"opacity")
+            self._nav_anim.setDuration(150)
+            self._nav_anim.setStartValue(0.0)
+            self._nav_anim.setEndValue(1.0)
+            self._nav_anim.start()
 
     def _on_watcher_status(self, text: str, color: str) -> None:
         if self._status_label is not None:
