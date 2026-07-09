@@ -24,48 +24,17 @@ class SidebarButton(QPushButton):
         self.setFixedHeight(46)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAccessibleName(text)
+        self.setObjectName("sidebar_btn")
         if icon_path and icon_path.exists():
             self.setIcon(QIcon(str(icon_path)))
             self.setIconSize(QSize(18, 18))
-        self.setStyleSheet(self._style(False))
-
-    def _style(self, active: bool) -> str:
-        if active:
-            return f"""
-                QPushButton {{
-                    background-color: {COLORS["primary"]};
-                    color: {COLORS["bg"]};
-                    border: none;
-                    border-radius: {BORDER_RADIUS["md"]};
-                    padding-left: 14px;
-                    text-align: left;
-                    font-size: {FONT_SIZES["md"]};
-                    font-weight: 700;
-                }}
-                QPushButton:hover {{
-                    background-color: {COLORS["primary"]};
-                }}
-            """
-        return f"""
-            QPushButton {{
-                background-color: transparent;
-                color: {COLORS["text_muted"]};
-                border: none;
-                border-radius: {BORDER_RADIUS["md"]};
-                padding-left: 14px;
-                text-align: left;
-                font-size: {FONT_SIZES["md"]};
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: {COLORS["card_hover"]};
-                color: {COLORS["text"]};
-            }}
-        """
 
     def set_active(self, active: bool) -> None:
         self.setChecked(active)
-        self.setStyleSheet(self._style(active))
+        self.setProperty("active", "true" if active else "false")
+        self.style().unpolish(self)
+        self.style().polish(self)
+
 
 
 class Card(QFrame):
@@ -73,31 +42,27 @@ class Card(QFrame):
         self,
         title: str,
         value: str,
-        color: str = COLORS["primary"],
+        level: str = "primary",
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
-        self._color = color
         self.setObjectName("card")
+        self.setProperty("level", level)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAccessibleName(f"Card: {title}")
         self.setAccessibleDescription(f"Value: {value}")
-        self._update_style()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["lg"])
         layout.setSpacing(SPACING["sm"])
 
         title_label = QLabel(title.upper())
-        title_label.setStyleSheet(
-            f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['xs']}; font-weight: 600; letter-spacing: 1.2px;"
-        )
+        title_label.setObjectName("card_title")
         layout.addWidget(title_label)
 
         self._value_label = QLabel(value)
-        self._value_label.setStyleSheet(
-            f"color: {color}; font-size: {FONT_SIZES['xl']}; font-weight: 800;"
-        )
+        self._value_label.setObjectName("card_value")
+        self._value_label.setProperty("level", level)
         self._value_label.setWordWrap(True)
         self._value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._value_label)
@@ -105,22 +70,9 @@ class Card(QFrame):
         self.setMinimumWidth(200)
         self.setFixedHeight(110)
 
-    def _update_style(self) -> None:
-        self.setStyleSheet(f"""
-            #card {{
-                background-color: {COLORS["card"]};
-                border: 1px solid {COLORS["border"]};
-                border-radius: {BORDER_RADIUS["lg"]};
-                border-bottom: 3px solid {self._color};
-            }}
-            #card:hover {{
-                border-color: {self._color};
-                background-color: {COLORS["card_hover"]};
-            }}
-        """)
-
     def update_value(self, value: str) -> None:
         self._value_label.setText(value)
+
 
 
 class TimelineRow(QWidget):
@@ -353,13 +305,6 @@ class OnboardingWidget(QFrame):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setObjectName("onboarding")
-        self.setStyleSheet(f"""
-            #onboarding {{
-                background-color: {COLORS["card"]};
-                border: 2px dashed {COLORS["border"]};
-                border-radius: {BORDER_RADIUS["lg"]};
-            }}
-        """)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING["3xl"], SPACING["3xl"], SPACING["3xl"], SPACING["3xl"])
@@ -383,22 +328,7 @@ class OnboardingWidget(QFrame):
 
         for text, callback in steps:
             btn = QPushButton(text)
-            btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {COLORS["bg2"]};
-                    color: {COLORS["text"]};
-                    border: 1px solid {COLORS["border"]};
-                    border-radius: {BORDER_RADIUS["md"]};
-                    padding: {SPACING["md"]}px;
-                    font-size: {FONT_SIZES["base"]};
-                    font-weight: 600;
-                    text-align: left;
-                }}
-                QPushButton:hover {{
-                    background-color: {COLORS["card_hover"]};
-                    border-color: {COLORS["primary"]};
-                }}
-            """)
+            btn.setProperty("class", "onboarding_btn")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.clicked.connect(callback)
             layout.addWidget(btn)

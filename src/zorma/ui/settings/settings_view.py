@@ -69,15 +69,11 @@ class SettingsView(QWidget):
         layout.setSpacing(SPACING["lg"])
 
         header = QLabel("Configuración")
-        header.setStyleSheet(
-            f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['2xl']}; font-weight: 800;"
-        )
+        header.setObjectName("settings_header")
         layout.addWidget(header)
 
         disk_header = QLabel("Estado del Disco")
-        disk_header.setStyleSheet(
-            f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['lg']}; font-weight: 700; margin-top: 8px;"
-        )
+        disk_header.setObjectName("disk_header")
         layout.addWidget(disk_header)
 
         cards_row = QHBoxLayout()
@@ -89,16 +85,13 @@ class SettingsView(QWidget):
         layout.addLayout(cards_row)
 
         self._no_alerts_label = QLabel("Sin alertas activas. Su sistema funciona con normalidad.")
+        self._no_alerts_label.setObjectName("no_alerts_label")
+        self._no_alerts_label.setProperty("level", "normal")
         self._no_alerts_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._no_alerts_label.setStyleSheet(
-            f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['md']}; padding: {SPACING['xl']}px;"
-        )
         layout.addWidget(self._no_alerts_label)
 
         form_header = QLabel("Preferencias")
-        form_header.setStyleSheet(
-            f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['lg']}; font-weight: 700; margin-top: 8px;"
-        )
+        form_header.setObjectName("pref_header")
         layout.addWidget(form_header)
 
         form = QFormLayout()
@@ -131,7 +124,7 @@ class SettingsView(QWidget):
         layout.addLayout(form)
 
         self._save_btn = QPushButton("Guardar Configuración")
-        self._save_btn.setStyleSheet(btn_primary())
+        self._save_btn.setProperty("class", "primary")
         self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._save_btn.clicked.connect(self._save)
         btn_row = QHBoxLayout()
@@ -142,9 +135,7 @@ class SettingsView(QWidget):
         layout.addStretch()
 
         self._data_label = QLabel(f"Directorio de datos: {self._data_dir}")
-        self._data_label.setStyleSheet(
-            f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['xs']};"
-        )
+        self._data_label.setObjectName("data_label")
         layout.addWidget(self._data_label)
 
     def _on_threshold_changed(self, value: int) -> None:
@@ -169,10 +160,14 @@ class SettingsView(QWidget):
             if free < self._disk_threshold:
                 self._alerts_card.update_value("1")
                 self._no_alerts_label.setText("⚠ Espacio de disco bajo")
-                self._no_alerts_label.setStyleSheet(
-                    f"color: {COLORS['warning']}; font-size: {FONT_SIZES['md']}; padding: {SPACING['xl']}px;"
-                )
-                self._disk_card.setStyleSheet(card_disk("warning"))
+                self._no_alerts_label.setProperty("level", "warning")
+                self._no_alerts_label.style().unpolish(self._no_alerts_label)
+                self._no_alerts_label.style().polish(self._no_alerts_label)
+                # Note: Card disk style needs special handling or refactor to use setProperty
+                # Temporarily leave it as is or handle it similarly
+                self._disk_card.setProperty("level", "warning")
+                self._disk_card.style().unpolish(self._disk_card)
+                self._disk_card.style().polish(self._disk_card)
                 if self._notification_service is not None:
                     drive = getattr(Path.home(), "drive", "system")
                     self._notification_service.notify(
@@ -183,10 +178,12 @@ class SettingsView(QWidget):
             else:
                 self._alerts_card.update_value("0")
                 self._no_alerts_label.setText("Sin alertas activas. Su sistema funciona con normalidad.")
-                self._no_alerts_label.setStyleSheet(
-                    f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['md']}; padding: {SPACING['xl']}px;"
-                )
-                self._disk_card.setStyleSheet(card_disk("normal"))
+                self._no_alerts_label.setProperty("level", "normal")
+                self._no_alerts_label.style().unpolish(self._no_alerts_label)
+                self._no_alerts_label.style().polish(self._no_alerts_label)
+                self._disk_card.setProperty("level", "normal")
+                self._disk_card.style().unpolish(self._disk_card)
+                self._disk_card.style().polish(self._disk_card)
         except OSError:
             self._disk_card.update_value("Desconocido")
 

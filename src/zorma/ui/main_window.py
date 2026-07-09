@@ -110,16 +110,12 @@ class MainWindow(QMainWindow):
     def _create_sidebar_frame(self) -> QFrame:
         sidebar = QFrame()
         sidebar.setFixedWidth(220)
-        sidebar.setStyleSheet(
-            f"background-color: {COLORS['sidebar']}; border-right: 1px solid {COLORS['border']};"
-        )
+        sidebar.setObjectName("sidebar")
         return sidebar
 
     def _create_logo(self) -> QLabel:
         logo = QLabel(APP_NAME)
-        logo.setStyleSheet(
-            f"color: {COLORS['text_bright']}; font-size: 22px; font-weight: 800; padding: 0 12px 20px 12px;"
-        )
+        logo.setObjectName("logo")
         return logo
 
     def _create_nav_items(self, layout: QVBoxLayout) -> None:
@@ -139,9 +135,7 @@ class MainWindow(QMainWindow):
 
     def _create_status_label(self) -> QLabel:
         self._status_label = QLabel("● Monitor detenido")
-        self._status_label.setStyleSheet(
-            f"color: {COLORS['error']}; font-size: 12px; font-weight: 600; padding: 12px;"
-        )
+        self._status_label.setObjectName("status_label")
         return self._status_label
 
     def _init_views(self) -> None:
@@ -159,14 +153,14 @@ class MainWindow(QMainWindow):
 
     def _build_content(self) -> QFrame:
         content = QFrame()
-        content.setStyleSheet(f"background-color: {COLORS['bg']};")
+        content.setObjectName("content")
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
         top_bar = QFrame()
         top_bar.setFixedHeight(36)
-        top_bar.setStyleSheet("background: transparent;")
+        top_bar.setObjectName("top_bar")
         bar_layout = QHBoxLayout(top_bar)
         bar_layout.setContentsMargins(0, 0, 8, 0)
         bar_layout.addStretch()
@@ -176,22 +170,8 @@ class MainWindow(QMainWindow):
         self._theme_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._theme_btn.setToolTip("Cambiar tema claro/oscuro")
         self._theme_btn.setAccessibleName("Cambiar tema")
+        self._theme_btn.setObjectName("theme_btn")
         self._theme_btn.clicked.connect(self._toggle_theme)
-        self._theme_btn.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: transparent;
-                color: {COLORS['text']};
-                border: 1px solid {COLORS['border']};
-                border-radius: 6px;
-                font-size: 16px;
-            }}
-            QPushButton:hover {{
-                background-color: {COLORS['card_hover']};
-                border-color: {COLORS['border_light']};
-            }}
-            """
-        )
         bar_layout.addWidget(self._theme_btn)
         content_layout.addWidget(top_bar)
 
@@ -319,36 +299,27 @@ class MainWindow(QMainWindow):
     def _on_watcher_status(self, text: str, color: str) -> None:
         if self._status_label is not None:
             self._status_label.setText(text)
-            self._status_label.setStyleSheet(
-                f"color: {color}; font-size: 12px; font-weight: 600; padding: 12px;"
-            )
+            self._status_label.setStyleSheet(f"color: {color};")
 
     def _on_theme_changed(self, theme: str) -> None:
         if self._theme_btn is not None:
             self._theme_btn.setText("☀" if theme == "light" else "☾")
-            self._theme_btn.setStyleSheet(
-                f"""
-                QPushButton {{
-                    background-color: transparent;
-                    color: {COLORS['text']};
-                    border: 1px solid {COLORS['border']};
-                    border-radius: 6px;
-                    font-size: 16px;
-                }}
-                QPushButton:hover {{
-                    background-color: {COLORS['card_hover']};
-                    border-color: {COLORS['border_light']};
-                }}
-                """
-            )
 
     def _toggle_theme(self) -> None:
         new = "light" if self._theme == "dark" else "dark"
         self._theme = new
         set_theme(new)
+        
+        # Actualización global: volvemos a aplicar QSS
         app = QApplication.instance()
         if app is not None:
             app.setStyleSheet(build_qss())
+            
         if self._rule_repository:
             self._rule_repository.set_theme(new)
         self._on_theme_changed(new)
+        
+        # Refrescar UI si es necesario (ej. pollish)
+        self.style().unpolish(self)
+        self.style().polish(self)
+

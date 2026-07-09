@@ -73,14 +73,17 @@ class DashboardView(QWidget):
 
     def _create_header(self) -> QLabel:
         header = QLabel("Inicio")
-        header.setStyleSheet(f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['2xl']}; font-weight: 800;")
+        header.setObjectName("header")
         return header
 
     def _create_cards(self) -> QHBoxLayout:
         rules_count = self._vm.get_rules_count()
-        self._card_total = Card("Clasificados", "0", COLORS["primary"])
-        self._card_rules = Card("Reglas Activas", rules_count, COLORS["success"])
-        self._card_errors = Card("Errores", "0", COLORS["error"])
+        self._card_total = Card("Clasificados", "0", "primary")
+        self._card_total.setObjectName("card_total")
+        self._card_rules = Card("Reglas Activas", rules_count, "success")
+        self._card_rules.setObjectName("card_rules")
+        self._card_errors = Card("Errores", "0", "error")
+        self._card_errors.setObjectName("card_errors")
 
         cards = QHBoxLayout()
         cards.setSpacing(16)
@@ -94,14 +97,14 @@ class DashboardView(QWidget):
         folder_row.setSpacing(SPACING["md"])
 
         self._folder_btn = QPushButton("📁 Seleccionar Carpeta")
-        self._folder_btn.setStyleSheet(btn_secondary())
+        self._folder_btn.setObjectName("folder_btn")
         self._folder_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._folder_btn.setAccessibleName("Seleccionar carpeta")
         self._folder_btn.clicked.connect(self._pick_folder)
         folder_row.addWidget(self._folder_btn)
 
         self._folder_label = QLabel("Sin carpeta seleccionada")
-        self._folder_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['base']};")
+        self._folder_label.setObjectName("folder_label")
         folder_row.addWidget(self._folder_label)
         folder_row.addStretch()
         return folder_row
@@ -117,6 +120,7 @@ class DashboardView(QWidget):
 
         self._action_btn = QPushButton("⏸ Seleccione una carpeta para iniciar")
         self._action_btn.setObjectName("action_btn")
+        self._action_btn.setProperty("state", "inactive")
         self._action_btn.setEnabled(False)
         self._action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._action_btn.setAccessibleName("Acción de clasificación")
@@ -131,7 +135,7 @@ class DashboardView(QWidget):
         progress_row.setSpacing(SPACING["md"])
 
         self._status_label = QLabel("")
-        self._status_label.setStyleSheet(f"color: {COLORS['primary']}; font-size: {FONT_SIZES['sm']}; font-weight: 600;")
+        self._status_label.setObjectName("status_label")
         self._status_label.hide()
         progress_row.addWidget(self._status_label)
 
@@ -142,7 +146,7 @@ class DashboardView(QWidget):
         progress_row.addWidget(self._progress, 1)
 
         self._cancel_btn = QPushButton("✕ Cancelar")
-        self._cancel_btn.setStyleSheet(btn_error())
+        self._cancel_btn.setObjectName("cancel_btn")
         self._cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._cancel_btn.setAccessibleName("Cancelar clasificación")
         self._cancel_btn.clicked.connect(self._vm.cancel_operation)
@@ -154,18 +158,18 @@ class DashboardView(QWidget):
         layout = QVBoxLayout()
         timeline_header_row = QHBoxLayout()
         timeline_header = QLabel("Actividad Reciente")
-        timeline_header.setStyleSheet(f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['lg']}; font-weight: 700;")
+        timeline_header.setObjectName("timeline_header")
         timeline_header_row.addWidget(timeline_header)
 
         self._undo_btn = QPushButton("↩ Deshacer")
-        self._undo_btn.setStyleSheet(btn_secondary())
+        self._undo_btn.setObjectName("undo_btn")
         self._undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._undo_btn.setAccessibleName("Deshacer todo")
         self._undo_btn.hide()
         self._undo_btn.clicked.connect(self._on_undo_all)
 
         self._redo_btn = QPushButton("↪ Rehacer todo")
-        self._redo_btn.setStyleSheet(btn_secondary())
+        self._redo_btn.setObjectName("redo_btn")
         self._redo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._redo_btn.setAccessibleName("Rehacer todo")
         self._redo_btn.hide()
@@ -251,8 +255,16 @@ class DashboardView(QWidget):
 
     def _on_status_text(self, text: str, color: str) -> None:
         if text:
+            # Mapear colores a niveles dinámicos
+            level = "primary"
+            if color == COLORS["error"]: level = "error"
+            elif color == COLORS["success"]: level = "success"
+            elif color == COLORS["warning"]: level = "warning"
+            
             self._status_label.setText(text)
-            self._status_label.setStyleSheet(f"color: {color}; font-size: {FONT_SIZES['sm']}; font-weight: 600;")
+            self._status_label.setProperty("level", level)
+            self._status_label.style().unpolish(self._status_label)
+            self._status_label.style().polish(self._status_label)
             self._status_label.show()
         else:
             self._status_label.hide()
@@ -359,49 +371,22 @@ class DashboardView(QWidget):
         if self._vm.is_classifying:
             self._action_btn.setText("⟳ Clasificando...")
             self._action_btn.setEnabled(False)
-            self._action_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {COLORS['bg2']}; color: {COLORS['text_muted']};
-                    border: 1px solid {COLORS['border']}; border-radius: {BORDER_RADIUS['md']};
-                    padding: 10px 22px; font-weight: 600; font-size: {FONT_SIZES['base']};
-                }}
-            """)
-            return
-
-        watch_path = self._vm.get_watch_path()
-        if watch_path is None:
-            self._action_btn.setText("⏸ Seleccione una carpeta para iniciar")
-            self._action_btn.setEnabled(False)
-            self._action_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {COLORS['bg2']}; color: {COLORS['text_muted']};
-                    border: 1px solid {COLORS['border']}; border-radius: {BORDER_RADIUS['md']};
-                    padding: 10px 22px; font-weight: 600; font-size: {FONT_SIZES['base']};
-                }}
-            """)
-        elif self._auto_checkbox.isChecked():
-            self._action_btn.setText(f"🟢 Monitoreando {watch_path.name}...")
-            self._action_btn.setEnabled(False)
-            self._action_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {COLORS['bg2']}; color: {COLORS['success']};
-                    border: 1px solid {COLORS['success']}; border-radius: {BORDER_RADIUS['md']};
-                    padding: 10px 22px; font-weight: 600; font-size: {FONT_SIZES['base']};
-                }}
-            """)
+            self._action_btn.setProperty("state", "inactive")
+        
         else:
-            self._action_btn.setText("⚡ Clasificar contenido actual")
-            self._action_btn.setEnabled(True)
-            self._action_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {COLORS['primary']}; color: {COLORS['bg']};
-                    border: none; border-radius: {BORDER_RADIUS['md']};
-                    padding: 10px 22px; font-weight: 700; font-size: {FONT_SIZES['base']};
-                }}
-                QPushButton:hover {{
-                    background-color: {COLORS['primary_hover']};
-                }}
-                QPushButton:pressed {{
-                    background-color: {COLORS['primary_pressed']};
-                }}
-            """)
+            watch_path = self._vm.get_watch_path()
+            if watch_path is None:
+                self._action_btn.setText("⏸ Seleccione una carpeta para iniciar")
+                self._action_btn.setEnabled(False)
+                self._action_btn.setProperty("state", "inactive")
+            elif self._auto_checkbox.isChecked():
+                self._action_btn.setText(f"🟢 Monitoreando {watch_path.name}...")
+                self._action_btn.setEnabled(False)
+                self._action_btn.setProperty("state", "monitoring")
+            else:
+                self._action_btn.setText("⚡ Clasificar contenido actual")
+                self._action_btn.setEnabled(True)
+                self._action_btn.setProperty("state", "active")
+        
+        self._action_btn.style().unpolish(self._action_btn)
+        self._action_btn.style().polish(self._action_btn)

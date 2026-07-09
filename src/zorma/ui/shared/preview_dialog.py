@@ -56,9 +56,7 @@ class PreviewDialog(QDialog):
         layout.setSpacing(SPACING["md"])
 
         header = QLabel(f"Escaneando: {self._watch_path.name}")
-        header.setStyleSheet(
-            f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['lg']}; font-weight: 700;"
-        )
+        header.setObjectName("preview_header")
         layout.addWidget(header)
 
         matched = sum(
@@ -81,26 +79,26 @@ class PreviewDialog(QDialog):
             stats_parts.append(f"{filtered} filtrados")
 
         summary = QLabel("  |  ".join(stats_parts))
-        summary.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['base']};")
+        summary.setObjectName("preview_summary")
         layout.addWidget(summary)
 
         select_row = QHBoxLayout()
         select_row.setSpacing(SPACING["sm"])
 
         self._select_all_btn = QPushButton("Seleccionar Todo")
-        self._select_all_btn.setStyleSheet(btn_small("secondary"))
+        self._select_all_btn.setProperty("class", "secondary")
         self._select_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._select_all_btn.clicked.connect(self._select_all)
         select_row.addWidget(self._select_all_btn)
 
         self._deselect_all_btn = QPushButton("Deseleccionar Todo")
-        self._deselect_all_btn.setStyleSheet(btn_small("secondary"))
+        self._deselect_all_btn.setProperty("class", "secondary")
         self._deselect_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._deselect_all_btn.clicked.connect(self._deselect_all)
         select_row.addWidget(self._deselect_all_btn)
 
         self._select_matched_btn = QPushButton("Seleccionar Solo Coincidentes")
-        self._select_matched_btn.setStyleSheet(btn_small("secondary"))
+        self._select_matched_btn.setProperty("class", "secondary")
         self._select_matched_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._select_matched_btn.clicked.connect(self._select_matched)
         select_row.addWidget(self._select_matched_btn)
@@ -108,9 +106,7 @@ class PreviewDialog(QDialog):
         select_row.addStretch()
 
         self._selection_count = QLabel("")
-        self._selection_count.setStyleSheet(
-            f"color: {COLORS['primary']}; font-size: {FONT_SIZES['sm']}; font-weight: 700;"
-        )
+        self._selection_count.setObjectName("preview_selection_count")
         select_row.addWidget(self._selection_count)
         layout.addLayout(select_row)
 
@@ -142,20 +138,20 @@ class PreviewDialog(QDialog):
 
         if conflicts:
             warn = QLabel(f"⚠ {conflicts} conflicto(s) detectados — use la columna Resolución")
-            warn.setStyleSheet(f"color: {COLORS['warning']}; font-size: 12px; font-weight: 600;")
+            warn.setObjectName("preview_warning")
             layout.addWidget(warn)
 
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
         cancel_btn = QPushButton("Cancelar")
-        cancel_btn.setStyleSheet(btn_secondary())
+        cancel_btn.setProperty("class", "secondary")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
         btn_row.addWidget(cancel_btn)
 
         self._apply_btn = QPushButton("✓ Aplicar Seleccionados")
-        self._apply_btn.setStyleSheet(btn_primary())
+        self._apply_btn.setProperty("class", "primary")
         self._apply_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._apply_btn.clicked.connect(self.accept)
         btn_row.addWidget(self._apply_btn)

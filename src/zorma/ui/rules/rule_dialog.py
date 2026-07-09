@@ -63,7 +63,7 @@ class RuleDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
 
         header = QLabel("Editar Regla" if self._editing else "Nueva Regla")
-        header.setStyleSheet(f"color: {COLORS['text_bright']}; font-size: 20px; font-weight: 700;")
+        header.setObjectName("rule_header")
         layout.addWidget(header)
 
         form = QFormLayout()
@@ -92,7 +92,7 @@ class RuleDialog(QDialog):
         form.addRow("Valor de condición:", self._condition_value)
 
         self._condition_hint = QLabel("Extensiones separadas por coma, ej. .mp4,.mkv,.avi")
-        self._condition_hint.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+        self._condition_hint.setObjectName("hint_label")
         form.addRow("", self._condition_hint)
 
         self._action_type = QComboBox()
@@ -108,14 +108,14 @@ class RuleDialog(QDialog):
         self._target_folder.setAccessibleName("Carpeta destino")
         folder_row.addWidget(self._target_folder, 1)
         browse_btn = QPushButton("Examinar...")
-        browse_btn.setStyleSheet(btn_secondary().replace("padding: 10px 22px;", "padding: 8px 16px;"))
+        browse_btn.setObjectName("browse_btn")
         browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         browse_btn.clicked.connect(self._browse_folder)
         folder_row.addWidget(browse_btn)
         form.addRow("Carpeta destino:", folder_row)
 
         self._target_hint = QLabel("Usa {ext} para crear carpetas automáticas por extensión, ej. C:\\Documentos\\{ext} → Documentos\\.txt")
-        self._target_hint.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+        self._target_hint.setObjectName("hint_label")
         form.addRow("", self._target_hint)
 
         self._rename_pattern = QLineEdit()
@@ -125,7 +125,7 @@ class RuleDialog(QDialog):
         form.addRow("Patrón de renombrado:", self._rename_pattern)
 
         self._error_label = QLabel("")
-        self._error_label.setStyleSheet(f"color: {COLORS['error']};")
+        self._error_label.setObjectName("error_label")
         layout.addWidget(self._error_label)
 
         self._name_input.textChanged.connect(self._validate)
@@ -139,13 +139,13 @@ class RuleDialog(QDialog):
         btn_row.addStretch()
 
         cancel_btn = QPushButton("Cancelar")
-        cancel_btn.setStyleSheet(btn_secondary())
+        cancel_btn.setProperty("class", "secondary")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
         btn_row.addWidget(cancel_btn)
 
         self._save_btn = QPushButton("Guardar Regla")
-        self._save_btn.setStyleSheet(btn_primary())
+        self._save_btn.setProperty("class", "primary")
         self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._save_btn.clicked.connect(self._save)
         btn_row.addWidget(self._save_btn)

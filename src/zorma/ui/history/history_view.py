@@ -38,11 +38,11 @@ class HistoryView(QWidget):
 
         header_row = QHBoxLayout()
         header = QLabel("Historial de Clasificación")
-        header.setStyleSheet(f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['2xl']}; font-weight: 700;")
+        header.setObjectName("history_header")
         header_row.addWidget(header)
 
         refresh_btn = QPushButton("⟳ Actualizar")
-        refresh_btn.setStyleSheet(btn_secondary())
+        refresh_btn.setProperty("class", "secondary")
         refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         refresh_btn.setAccessibleName("Actualizar historial")
         refresh_btn.clicked.connect(self._load_history)
@@ -51,11 +51,12 @@ class HistoryView(QWidget):
         layout.addLayout(header_row)
 
         info = QLabel("Revise todos los movimientos de archivos y resultados de clasificación.")
-        info.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['base']};")
+        info.setObjectName("history_info")
         info.setWordWrap(True)
         layout.addWidget(info)
 
         self._table = QTableWidget(0, 6)
+        self._table.setObjectName("history_table")
         self._table.setHorizontalHeaderLabels(["Archivo", "Regla", "Acción", "Estado", "Hora", "Origen"])
         hdr = self._table.horizontalHeader()
         if hdr is not None:
@@ -68,15 +69,10 @@ class HistoryView(QWidget):
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._table.setAlternatingRowColors(True)
-        self._table.setStyleSheet(f"""
-            QTableWidget {{
-                alternate-background-color: {COLORS["bg2"]};
-            }}
-        """)
         layout.addWidget(self._table, 1)
 
         self._load_more_btn = QPushButton("Cargar más…")
-        self._load_more_btn.setStyleSheet(btn_secondary())
+        self._load_more_btn.setProperty("class", "secondary")
         self._load_more_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._load_more_btn.setAccessibleName("Cargar más registros")
         self._load_more_btn.clicked.connect(self._load_more)

@@ -83,11 +83,12 @@ class RulesView(QWidget):
     def _create_header(self) -> QHBoxLayout:
         header_row = QHBoxLayout()
         header = QLabel("Reglas de Clasificación")
-        header.setStyleSheet(f"color: {COLORS['text_bright']}; font-size: {FONT_SIZES['2xl']}; font-weight: 700;")
+        header.setObjectName("rules_header")
         header_row.addWidget(header)
 
         self._add_btn = QPushButton("+ Nueva Regla")
-        self._add_btn.setStyleSheet(btn_primary())
+        self._add_btn.setObjectName("add_btn")
+        self._add_btn.setProperty("class", "primary")
         self._add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._add_btn.setAccessibleName("Nueva regla")
         self._add_btn.clicked.connect(self._new_rule)
@@ -95,7 +96,8 @@ class RulesView(QWidget):
         header_row.addWidget(self._add_btn)
 
         self._delete_btn = QPushButton("Eliminar Seleccionada")
-        self._delete_btn.setStyleSheet(btn_error())
+        self._delete_btn.setObjectName("delete_btn")
+        self._delete_btn.setProperty("class", "error")
         self._delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._delete_btn.setAccessibleName("Eliminar regla seleccionada")
         self._delete_btn.clicked.connect(self._delete_selected)
@@ -107,12 +109,13 @@ class RulesView(QWidget):
             "Defina reglas para organizar sus archivos automáticamente "
             "por extensión, tamaño, fecha o nombre."
         )
-        info.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['base']};")
+        info.setObjectName("rules_description")
         info.setWordWrap(True)
         return info
 
     def _create_table(self) -> QTableWidget:
         self._table = RulesTable(self)
+        self._table.setObjectName("rules_table")
         self._table.setHorizontalHeaderLabels(["#", "Nombre", "Tipo", "Condición", "Acción", "Destino", "Estado"])
         hdr = self._table.horizontalHeader()
         if hdr is not None:
@@ -132,11 +135,6 @@ class RulesView(QWidget):
         self._table.setDropIndicatorShown(True)
         self._table.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self._table.setDragDropOverwriteMode(False)
-        self._table.setStyleSheet(f"""
-            QTableWidget {{
-                alternate-background-color: {COLORS["bg2"]};
-            }}
-        """)
         self._table.doubleClicked.connect(self._edit_selected)
         return self._table
 

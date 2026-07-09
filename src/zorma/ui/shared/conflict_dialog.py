@@ -41,26 +41,22 @@ class ConflictDialog(QDialog):
         layout.setSpacing(SPACING["md"])
 
         header_widget = QWidget()
-        header_widget.setStyleSheet(
-            f"background-color: {hex_to_rgba(COLORS['warning'], 0.1)}; border-radius: {BORDER_RADIUS['md']}; padding: 4px;"
-        )
+        header_widget.setObjectName("conflict_header")
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
 
         icon_label = QLabel("⚠")
-        icon_label.setStyleSheet("font-size: 24px;")
+        icon_label.setObjectName("conflict_icon")
         header_layout.addWidget(icon_label)
 
         header_text = QLabel(f"{len(self._conflicts)} conflicto(s) de destino")
-        header_text.setStyleSheet(
-            f"color: {COLORS['warning']}; font-size: {FONT_SIZES['lg']}; font-weight: 700;"
-        )
+        header_text.setObjectName("conflict_text")
         header_layout.addWidget(header_text)
         header_layout.addStretch()
         layout.addWidget(header_widget)
 
         desc = QLabel("El archivo de destino ya existe. Elija cómo proceder:")
-        desc.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['base']};")
+        desc.setObjectName("conflict_desc")
         layout.addWidget(desc)
 
         self._table = QTableWidget(0, 3)
@@ -92,13 +88,13 @@ class ConflictDialog(QDialog):
         btn_row.addStretch()
 
         cancel_btn = QPushButton("Cancelar")
-        cancel_btn.setStyleSheet(btn_secondary())
+        cancel_btn.setProperty("class", "secondary")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
         btn_row.addWidget(cancel_btn)
 
         self._apply_btn = QPushButton("Aplicar seleccionados")
-        self._apply_btn.setStyleSheet(btn_primary())
+        self._apply_btn.setProperty("class", "primary")
         self._apply_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._apply_btn.clicked.connect(self.accept)
         btn_row.addWidget(self._apply_btn)
