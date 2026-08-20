@@ -28,8 +28,8 @@ from .dashboard.dashboard_view import DashboardView
 from .history.history_view import HistoryView
 from .rules.rules_view import RulesView
 from .settings.settings_view import SettingsView
-from .shared.styles import COLORS, build_qss, set_theme
-from .shared.toast import show_toast
+from .shared.styles import COLORS, construir_qss, establecer_tema
+from .shared.toast import mostrar_toast
 from .shared.widgets import SidebarButton
 
 
@@ -53,21 +53,21 @@ class MainWindow(QMainWindow):
         self._theme_btn: QPushButton | None = None
         self._nav_anim: QPropertyAnimation | None = None
 
-        self._theme = self._rule_repository.get_theme() if self._rule_repository else "dark"
+        self._theme = self._rule_repository.obtener_tema() if self._rule_repository else "dark"
         if self._theme == "light":
-            set_theme("light")
+            establecer_tema("light")
             app = QApplication.instance()
             if app is not None:
-                app.setStyleSheet(build_qss())
+                app.setStyleSheet(construir_qss())
 
-        self._setup_ui()
-        self._setup_shortcuts()
-        self._setup_tray()
+        self._configurar_ui()
+        self._configurar_atajos()
+        self._configurar_bandeja()
         icon_path = ICONS_DIR / "app_icon.svg"
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
 
-    def _setup_ui(self) -> None:
+    def _configurar_ui(self) -> None:
         self.setWindowTitle(APP_NAME)
         self.setMinimumSize(1024, 680)
         self.resize(1280, 800)
@@ -78,10 +78,10 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        layout.addWidget(self._build_sidebar())
-        layout.addWidget(self._build_content(), 1)
+        layout.addWidget(self._construir_barra_lateral())
+        layout.addWidget(self._construir_contenido(), 1)
 
-    def _build_sidebar(self) -> QFrame:
+    def _construir_barra_lateral(self) -> QFrame:
         sidebar = QFrame()
         sidebar.setFixedWidth(220)
         sidebar.setObjectName("sidebar")
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow):
         logo.setObjectName("logo")
         sidebar_layout.addWidget(logo)
 
-        self._init_views()
+        self._inicializar_vistas()
         self._nav_buttons: list[SidebarButton] = []
         self._nav_stack = QStackedWidget()
         self._nav_stack.addWidget(self._dashboard_view)
@@ -101,7 +101,7 @@ class MainWindow(QMainWindow):
         self._nav_stack.addWidget(self._history_view)
         self._nav_stack.addWidget(self._settings_view)
 
-        self._create_nav_items(sidebar_layout)
+        self._crear_items_navegacion(sidebar_layout)
 
         sidebar_layout.addStretch()
 
@@ -109,11 +109,11 @@ class MainWindow(QMainWindow):
         self._status_label.setObjectName("status_label")
         sidebar_layout.addWidget(self._status_label)
 
-        self._nav_buttons[0].set_active(True)
+        self._nav_buttons[0].establecer_activo(True)
 
         return sidebar
 
-    def _create_nav_items(self, layout: QVBoxLayout) -> None:
+    def _crear_items_navegacion(self, layout: QVBoxLayout) -> None:
         nav_items = [
             ("Inicio", "dashboard.svg"),
             ("Reglas", "rules.svg"),
@@ -124,28 +124,23 @@ class MainWindow(QMainWindow):
         for i, (label, icon_name) in enumerate(nav_items):
             icon_path = ICONS_DIR / icon_name
             btn = SidebarButton(label, icon_path)
-            btn.clicked.connect(lambda checked, idx=i: self._navigate(idx))
+            btn.clicked.connect(lambda checked, idx=i: self._navegar(idx))
             self._nav_buttons.append(btn)
             layout.addWidget(btn)
 
-    def _create_status_label(self) -> QLabel:
-        self._status_label = QLabel("● Monitor detenido")
-        self._status_label.setObjectName("status_label")
-        return self._status_label
-
-    def _init_views(self) -> None:
+    def _inicializar_vistas(self) -> None:
         self._rules_view = RulesView(self._data_dir, self._rule_repository)
 
         self._dashboard_view = DashboardView(self._data_dir, self._rule_repository, self._gestor_deshacer)
         if self._watcher_service is not None:
-            self._dashboard_view.set_watcher_service(self._watcher_service)
-        self._dashboard_view.watcher_status_changed.connect(self._on_watcher_status)
-        self._dashboard_view.navigate_requested.connect(self._navigate)
+            self._dashboard_view.establecer_servicio_vigilancia(self._watcher_service)
+        self._dashboard_view.watcher_status_changed.connect(self._al_estado_vigilancia)
+        self._dashboard_view.navigate_requested.connect(self._navegar)
 
         self._settings_view = SettingsView(self._data_dir)
         self._history_view = HistoryView(self._data_dir, self._rule_repository)
 
-    def _build_content(self) -> QFrame:
+    def _construir_contenido(self) -> QFrame:
         content = QFrame()
         content.setObjectName("content")
         content_layout = QVBoxLayout(content)
@@ -165,52 +160,52 @@ class MainWindow(QMainWindow):
         self._theme_btn.setToolTip("Cambiar tema claro/oscuro")
         self._theme_btn.setAccessibleName("Cambiar tema")
         self._theme_btn.setObjectName("theme_btn")
-        self._theme_btn.clicked.connect(self._toggle_theme)
+        self._theme_btn.clicked.connect(self._alternar_tema)
         bar_layout.addWidget(self._theme_btn)
         content_layout.addWidget(top_bar)
 
         content_layout.addWidget(self._nav_stack, 1)
         return content
 
-    def _setup_shortcuts(self) -> None:
+    def _configurar_atajos(self) -> None:
         if self._gestor_deshacer is not None:
-            QShortcut(QKeySequence.StandardKey.Undo, self, self._undo_shortcut)
-            QShortcut(QKeySequence.StandardKey.Redo, self, self._redo_shortcut)
+            QShortcut(QKeySequence.StandardKey.Undo, self, self._atajo_deshacer)
+            QShortcut(QKeySequence.StandardKey.Redo, self, self._atajo_rehacer)
 
-        QShortcut(QKeySequence("Ctrl+N"), self, self._new_rule_shortcut)
-        QShortcut(QKeySequence(QKeySequence.StandardKey.Close), self, self._ctrl_w_shortcut)
-        QShortcut(QKeySequence("F5"), self, self._refresh_shortcut)
+        QShortcut(QKeySequence("Ctrl+N"), self, self._atajo_nueva_regla)
+        QShortcut(QKeySequence(QKeySequence.StandardKey.Close), self, self._atajo_ctrl_w)
+        QShortcut(QKeySequence("F5"), self, self._atajo_refrescar)
 
         for i in range(4):
-            QShortcut(QKeySequence(f"Ctrl+{i + 1}"), self, lambda checked, idx=i: self._navigate(idx))
+            QShortcut(QKeySequence(f"Ctrl+{i + 1}"), self, lambda checked, idx=i: self._navegar(idx))
 
-    def _undo_shortcut(self) -> None:
+    def _atajo_deshacer(self) -> None:
         if self._gestor_deshacer is not None:
-            result = self._gestor_deshacer.undo()
+            result = self._gestor_deshacer.deshacer()
             if result is not None:
-                show_toast("↩ Archivo restaurado exitosamente", COLORS["success"])
+                mostrar_toast("↩ Archivo restaurado exitosamente", COLORS["success"])
 
-    def _redo_shortcut(self) -> None:
+    def _atajo_rehacer(self) -> None:
         if self._gestor_deshacer is not None:
-            result = self._gestor_deshacer.redo()
+            result = self._gestor_deshacer.rehacer()
             if result is not None:
-                show_toast("↪ Archivo reclasificado exitosamente", COLORS["success"])
+                mostrar_toast("↪ Archivo reclasificado exitosamente", COLORS["success"])
 
-    def _new_rule_shortcut(self) -> None:
-        self._navigate(1)
-        self._rules_view._new_rule()
+    def _atajo_nueva_regla(self) -> None:
+        self._navegar(1)
+        self._rules_view._nueva_regla()
 
-    def _ctrl_w_shortcut(self) -> None:
+    def _atajo_ctrl_w(self) -> None:
         self.close()
 
-    def _refresh_shortcut(self) -> None:
+    def _atajo_refrescar(self) -> None:
         idx = self._nav_stack.currentIndex()
         if idx == 0:
-            self._dashboard_view.run_scan()
+            self._dashboard_view.ejecutar_escaneo()
         elif idx == 1:
-            self._rules_view._load_rules()
+            self._rules_view._cargar_reglas()
 
-    def _setup_tray(self) -> None:
+    def _configurar_bandeja(self) -> None:
         self._tray_icon = QSystemTrayIcon(self)
         self._tray_icon.setToolTip(APP_NAME)
         icon_path = ICONS_DIR / "tray_icon.svg"
@@ -220,7 +215,7 @@ class MainWindow(QMainWindow):
         tray_menu = QMenu(self)
 
         show_action = QAction("Mostrar/Ocultar", self)
-        show_action.triggered.connect(self._toggle_visibility)
+        show_action.triggered.connect(self._alternar_visibilidad)
         tray_menu.addAction(show_action)
 
         tray_menu.addSeparator()
@@ -232,15 +227,15 @@ class MainWindow(QMainWindow):
         tray_menu.addAction(quit_action)
 
         self._tray_icon.setContextMenu(tray_menu)
-        self._tray_icon.activated.connect(self._on_tray_activated)
+        self._tray_icon.activated.connect(self._al_activar_bandeja)
 
         if self._settings_view is not None:
             adapter = PyQtNotificationAdapter(self._tray_icon)
-            self._settings_view.set_notification_service(adapter)
+            self._settings_view.establecer_servicio_notificacion(adapter)
 
         self._tray_icon.show()
 
-    def _toggle_visibility(self) -> None:
+    def _alternar_visibilidad(self) -> None:
         if self.isVisible():
             self.hide()
         else:
@@ -248,9 +243,9 @@ class MainWindow(QMainWindow):
             self.raise_()
             self.activateWindow()
 
-    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+    def _al_activar_bandeja(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
-            self._toggle_visibility()
+            self._alternar_visibilidad()
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
         if event is None:
@@ -261,12 +256,12 @@ class MainWindow(QMainWindow):
         else:
             event.accept()
 
-    def _navigate(self, index: int) -> None:
+    def _navegar(self, index: int) -> None:
         if self._nav_stack.currentIndex() == index:
             return
 
         for i, btn in enumerate(self._nav_buttons):
-            btn.set_active(i == index)
+            btn.establecer_activo(i == index)
 
         widget = self._nav_stack.widget(index)
         if widget is not None:
@@ -290,23 +285,23 @@ class MainWindow(QMainWindow):
             self._nav_anim.setEndValue(1.0)
             self._nav_anim.start()
 
-    def _on_watcher_status(self, text: str, color: str) -> None:
+    def _al_estado_vigilancia(self, text: str, color: str) -> None:
         if self._status_label is not None:
             self._status_label.setText(text)
             self._status_label.setStyleSheet(f"color: {color};")
 
-    def _toggle_theme(self) -> None:
+    def _alternar_tema(self) -> None:
         new = "light" if self._theme == "dark" else "dark"
         self._theme = new
-        set_theme(new)
+        establecer_tema(new)
 
         # Actualización global: volvemos a aplicar QSS
         app = QApplication.instance()
         if app is not None:
-            app.setStyleSheet(build_qss())
+            app.setStyleSheet(construir_qss())
 
         if self._rule_repository:
-            self._rule_repository.set_theme(new)
+            self._rule_repository.establecer_tema(new)
         if self._theme_btn is not None:
             self._theme_btn.setText("☀" if new == "light" else "☾")
 

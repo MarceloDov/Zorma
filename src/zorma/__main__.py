@@ -11,7 +11,7 @@ from .config.settings import APP_NAME, DATA_DIR, UNDO_STACK_LIMIT
 from .core.services.gestor_deshacer import GestorDeshacer
 from .core.services.servicio_clasificacion import ServicioClasificacion
 from .ui.main_window import MainWindow
-from .ui.shared.styles import build_qss
+from .ui.shared.styles import construir_qss
 
 
 def main() -> None:
@@ -21,13 +21,13 @@ def main() -> None:
     )
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
-    app.setStyleSheet(build_qss())
+    app.setStyleSheet(construir_qss())
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     repo = ZormaRepository(DATA_DIR, undo_limit=UNDO_STACK_LIMIT)
-    if not repo.get_groups():
-        repo.create_default_rules()
+    if not repo.obtener_grupos():
+        repo.crear_reglas_predeterminadas()
 
     gestor_deshacer = GestorDeshacer(repo)
 

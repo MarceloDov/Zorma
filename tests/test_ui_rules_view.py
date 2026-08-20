@@ -31,7 +31,7 @@ def sample_action() -> AccionRegla:
 
 class TestRulesView:
     def test_shows_empty_state_when_no_rules(self, qtbot, repo: MagicMock):
-        repo.get_all_rules.return_value = []
+        repo.obtener_todas_las_reglas.return_value = []
         view = RulesView(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
@@ -40,8 +40,8 @@ class TestRulesView:
         assert empty.isVisible()
 
     def test_shows_table_when_rules_exist(self, qtbot, repo: MagicMock, sample_rule: Regla, sample_action: AccionRegla):
-        repo.get_all_rules.return_value = [sample_rule]
-        repo.get_actions_for_rule.return_value = [sample_action]
+        repo.obtener_todas_las_reglas.return_value = [sample_rule]
+        repo.obtener_acciones_de_regla.return_value = [sample_action]
         view = RulesView(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
@@ -50,8 +50,8 @@ class TestRulesView:
         assert table.rowCount() == 1
 
     def test_table_contains_rule_name(self, qtbot, repo: MagicMock, sample_rule: Regla, sample_action: AccionRegla):
-        repo.get_all_rules.return_value = [sample_rule]
-        repo.get_actions_for_rule.return_value = [sample_action]
+        repo.obtener_todas_las_reglas.return_value = [sample_rule]
+        repo.obtener_acciones_de_regla.return_value = [sample_action]
         view = RulesView(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
@@ -61,22 +61,22 @@ class TestRulesView:
         assert item.text() == "Videos"
 
     def test_add_button_creates_rule(self, qtbot, repo: MagicMock, sample_rule: Regla, sample_action: AccionRegla):
-        repo.get_all_rules.return_value = []
+        repo.obtener_todas_las_reglas.return_value = []
         view = RulesView(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
         # Click new rule button
-        repo.get_all_rules.return_value = [sample_rule]
-        repo.get_actions_for_rule.return_value = [sample_action]
+        repo.obtener_todas_las_reglas.return_value = [sample_rule]
+        repo.obtener_acciones_de_regla.return_value = [sample_action]
         # Simulate creating a rule
-        view._vm.create_rule(sample_rule, sample_action)
+        view._vm.crear_regla(sample_rule, sample_action)
         qtbot.wait(50)
         table = view.findChild(QTableWidget)
         assert table.rowCount() == 1
 
     def test_delete_button_removes_rule(self, qtbot, repo: MagicMock, sample_rule: Regla, sample_action: AccionRegla):
-        repo.get_all_rules.return_value = [sample_rule]
-        repo.get_actions_for_rule.return_value = [sample_action]
+        repo.obtener_todas_las_reglas.return_value = [sample_rule]
+        repo.obtener_acciones_de_regla.return_value = [sample_action]
         view = RulesView(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
@@ -84,8 +84,8 @@ class TestRulesView:
         assert table.rowCount() == 1
         # Select the row
         table.selectRow(0)
-        repo.get_all_rules.return_value = []
-        view._vm.delete_rule(sample_rule.id, sample_rule.nombre)
+        repo.obtener_todas_las_reglas.return_value = []
+        view._vm.eliminar_regla(sample_rule.id, sample_rule.nombre)
         qtbot.wait(50)
         assert table.rowCount() == 0
 
@@ -93,9 +93,9 @@ class TestRulesView:
         view = RulesView(Path("/tmp"))
         qtbot.addWidget(view)
         view.show()
-        repo.get_all_rules.return_value = [sample_rule]
-        repo.get_actions_for_rule.return_value = [sample_action]
-        view.set_repository(repo)
+        repo.obtener_todas_las_reglas.return_value = [sample_rule]
+        repo.obtener_acciones_de_regla.return_value = [sample_action]
+        view.establecer_repositorio(repo)
         qtbot.wait(50)
         table = view.findChild(QTableWidget)
         assert table.rowCount() == 1

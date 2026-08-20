@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QScrollAre
 
 from ...core.models.enums import EstadoClasificacion
 from ...core.models.resultado_clasificacion import ResultadoClasificacion
-from .styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, btn_secondary
+from .styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, boton_secundario
 
 
 class SidebarButton(QPushButton):
@@ -29,7 +29,7 @@ class SidebarButton(QPushButton):
             self.setIcon(QIcon(str(icon_path)))
             self.setIconSize(QSize(18, 18))
 
-    def set_active(self, active: bool) -> None:
+    def establecer_activo(self, active: bool) -> None:
         self.setChecked(active)
         self.setProperty("active", "true" if active else "false")
         self.style().unpolish(self)
@@ -70,7 +70,7 @@ class Card(QFrame):
         self.setMinimumWidth(200)
         self.setFixedHeight(110)
 
-    def update_value(self, value: str) -> None:
+    def actualizar_valor(self, value: str) -> None:
         self._value_label.setText(value)
 
 
@@ -157,7 +157,7 @@ class TimelineRow(QWidget):
             """)
             undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             undo_btn.setToolTip("Deshacer movimiento")
-            undo_btn.clicked.connect(self._on_undo)
+            undo_btn.clicked.connect(self._al_deshacer)
             layout.addWidget(undo_btn)
 
         self.setStyleSheet(f"""
@@ -170,10 +170,10 @@ class TimelineRow(QWidget):
             }}
         """)
 
-    def _on_undo(self) -> None:
+    def _al_deshacer(self) -> None:
         self.undo_clicked.emit(self._result)
 
-    def result(self) -> ResultadoClasificacion:
+    def resultado(self) -> ResultadoClasificacion:
         return self._result
 
 
@@ -210,7 +210,7 @@ class TimelineFeed(QScrollArea):
         self._empty_icon_hidden = False
         self._layout.insertWidget(0, self._empty_icon)
 
-    def add_result(self, result: ResultadoClasificacion, can_undo: bool = False) -> None:
+    def agregar_resultado(self, result: ResultadoClasificacion, can_undo: bool = False) -> None:
         if not self._empty_icon_hidden:
             try:
                 self._empty_icon.hide()
@@ -234,7 +234,7 @@ class TimelineFeed(QScrollArea):
         if scroll_bar is not None:
             scroll_bar.setValue(0)
 
-    def clear(self) -> None:
+    def limpiar(self) -> None:
         while self._layout.count() > 1:
             item = self._layout.takeAt(0)
             if item is not None:
@@ -287,7 +287,7 @@ class EmptyState(QWidget):
 
         if button_text:
             btn = QPushButton(button_text)
-            btn.setStyleSheet(btn_secondary())
+            btn.setStyleSheet(boton_secundario())
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_layout = QHBoxLayout()
             btn_layout.addStretch()
@@ -297,7 +297,7 @@ class EmptyState(QWidget):
 
             self._button = btn
 
-    def set_button_callback(self, callback: object) -> None:
+    def establecer_callback_boton(self, callback: object) -> None:
         if hasattr(self, "_button"):
             self._button.clicked.connect(callback)
 

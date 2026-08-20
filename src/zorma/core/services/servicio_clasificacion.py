@@ -31,28 +31,28 @@ class ServicioClasificacion:
         self._repo = repo
         self._result_callback: Callable[[ResultadoClasificacion], None] | None = None
 
-    def set_result_callback(self, callback: Callable[[ResultadoClasificacion], None]) -> None:
+    def establecer_callback_resultado(self, callback: Callable[[ResultadoClasificacion], None]) -> None:
         self._result_callback = callback
 
-    def get_history(self) -> list[ResultadoClasificacion]:
-        return self._repo.get_history()
+    def obtener_historial(self) -> list[ResultadoClasificacion]:
+        return self._repo.obtener_historial()
 
-    def start_monitoring(
+    def iniciar_monitoreo(
         self,
         paths: list[Path],
         filter_config: FilterConfig | None = None,
     ) -> None:
-        self._watcher.update_filter(filter_config)
+        self._watcher.actualizar_filtro(filter_config)
         excluded_patterns = ["Archivos *"]
-        self._watcher.start(paths, self._on_event, excluded_patterns=excluded_patterns)
-        self._initial_scan(paths, filter_config)
+        self._watcher.iniciar(paths, self._al_evento, excluded_patterns=excluded_patterns)
+        self._escaneo_inicial(paths, filter_config)
         logger.info("Watcher started on %d path(s)", len(paths))
 
-    def stop_monitoring(self) -> None:
-        self._watcher.stop()
+    def detener_monitoreo(self) -> None:
+        self._watcher.detener()
         logger.info("Watcher stopped")
 
-    def _on_event(self, event: EventoArchivo) -> None:
+    def _al_evento(self, event: EventoArchivo) -> None:
         if event.src_path.is_dir():
             result = ResultadoClasificacion(
                 estado=EstadoClasificacion.FILTRADO,
@@ -60,19 +60,19 @@ class ServicioClasificacion:
             )
         else:
             result = self._clasificar(event.src_path)
-            self._repo.add_history(result)
+            self._repo.agregar_historial(result)
         if self._result_callback:
             self._result_callback(result)
 
     def clasificar(self, file_path: Path, overwrite: bool = False) -> ResultadoClasificacion:
         result = self._clasificar(file_path, overwrite)
-        self._repo.add_history(result)
+        self._repo.agregar_historial(result)
         return result
 
     _SKIP_DIRS = {"node_modules", ".git", "__pycache__", "venv", ".venv", "dist", "build", ".tox", ".mypy_cache"}
 
     @staticmethod
-    def _iter_files(paths: list[Path], filter_config: FilterConfig | None = None) -> Generator[Path, None, None]:
+    def _iterar_archivos(paths: list[Path], filter_config: FilterConfig | None = None) -> Generator[Path, None, None]:
         for base in paths:
             if not base.is_dir():
                 continue
@@ -81,24 +81,24 @@ class ServicioClasificacion:
                     continue
                 if any(part in ServicioClasificacion._SKIP_DIRS for part in fpath.parts):
                     continue
-                if filter_config and not filter_config.matches(fpath):
+                if filter_config and not filter_config.coincide(fpath):
                     continue
                 yield fpath
 
-    def _find_action(self, file_path: Path) -> tuple[Regla, AccionRegla] | None:
+    def _buscar_accion(self, file_path: Path) -> tuple[Regla, AccionRegla] | None:
         if not file_path.exists():
             return None
-        reglas = self._repo.get_all_rules()
+        reglas = self._repo.obtener_todas_las_reglas()
         archivo = Archivo(_ruta_completa=file_path)
         for regla in reglas:
             if regla.evaluar(archivo):
-                acciones = self._repo.get_actions_for_rule(regla.id)
+                acciones = self._repo.obtener_acciones_de_regla(regla.id)
                 if acciones:
                     return regla, acciones[0]
         return None
 
     def _clasificar(self, file_path: Path, overwrite: bool = False) -> ResultadoClasificacion:
-        match = self._find_action(file_path)
+        match = self._buscar_accion(file_path)
         archivo = Archivo(_ruta_completa=file_path)
         if match is None:
             return ResultadoClasificacion(
@@ -113,7 +113,7 @@ class ServicioClasificacion:
         return result
 
     def previsualizar(self, file_path: Path) -> ResultadoClasificacion:
-        match = self._find_action(file_path)
+        match = self._buscar_accion(file_path)
         archivo = Archivo(_ruta_completa=file_path)
         if match is None:
             return ResultadoClasificacion(
@@ -136,18 +136,18 @@ class ServicioClasificacion:
         filter_config: FilterConfig | None = None,
     ) -> list[ResultadoClasificacion]:
         results: list[ResultadoClasificacion] = []
-        for fpath in self._iter_files(paths, filter_config):
+        for fpath in self._iterar_archivos(paths, filter_config):
             result = self.previsualizar(fpath)
             results.append(result)
         return results
 
-    def _initial_scan(
+    def _escaneo_inicial(
         self,
         paths: list[Path],
         filter_config: FilterConfig | None = None,
     ) -> list[ResultadoClasificacion]:
         results: list[ResultadoClasificacion] = []
-        for fpath in self._iter_files(paths, filter_config):
+        for fpath in self._iterar_archivos(paths, filter_config):
             result = self.previsualizar(fpath)
             if self._result_callback:
                 self._result_callback(result)

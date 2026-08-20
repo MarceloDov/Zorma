@@ -48,9 +48,9 @@ class PreviewDialog(QDialog):
         self.setWindowTitle("Vista Previa — Modo Activo")
         self.setMinimumSize(950, 600)
         self.setModal(True)
-        self._setup_ui()
+        self._configurar_ui()
 
-    def _setup_ui(self) -> None:
+    def _configurar_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING["2xl"], SPACING["2xl"], SPACING["2xl"], SPACING["2xl"])
         layout.setSpacing(SPACING["md"])
@@ -88,19 +88,19 @@ class PreviewDialog(QDialog):
         self._select_all_btn = QPushButton("Seleccionar Todo")
         self._select_all_btn.setProperty("class", "secondary")
         self._select_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._select_all_btn.clicked.connect(self._select_all)
+        self._select_all_btn.clicked.connect(self._seleccionar_todo)
         select_row.addWidget(self._select_all_btn)
 
         self._deselect_all_btn = QPushButton("Deseleccionar Todo")
         self._deselect_all_btn.setProperty("class", "secondary")
         self._deselect_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._deselect_all_btn.clicked.connect(self._deselect_all)
+        self._deselect_all_btn.clicked.connect(self._deseleccionar_todo)
         select_row.addWidget(self._deselect_all_btn)
 
         self._select_matched_btn = QPushButton("Seleccionar Solo Coincidentes")
         self._select_matched_btn.setProperty("class", "secondary")
         self._select_matched_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._select_matched_btn.clicked.connect(self._select_matched)
+        self._select_matched_btn.clicked.connect(self._seleccionar_coincidentes)
         select_row.addWidget(self._select_matched_btn)
 
         select_row.addStretch()
@@ -133,8 +133,8 @@ class PreviewDialog(QDialog):
             vhdr.setDefaultSectionSize(38)
         layout.addWidget(self._table, 1)
 
-        self._populate()
-        self._update_selection_count()
+        self._poblar()
+        self._actualizar_contador_seleccion()
 
         if conflicts:
             warn = QLabel(f"⚠ {conflicts} conflicto(s) detectados — use la columna Resolución")
@@ -158,7 +158,7 @@ class PreviewDialog(QDialog):
 
         layout.addLayout(btn_row)
 
-    def _populate(self) -> None:
+    def _poblar(self) -> None:
         for r in self._results:
             row = self._table.rowCount()
             self._table.insertRow(row)
@@ -170,7 +170,7 @@ class PreviewDialog(QDialog):
             )
             cb.setChecked(is_actionable)
             cb.setStyleSheet("QCheckBox::indicator { width: 16px; height: 16px; }")
-            cb.toggled.connect(self._update_selection_count)
+            cb.toggled.connect(self._actualizar_contador_seleccion)
             self._row_checks.append(cb)
 
             cb_widget = QWidget()
@@ -206,7 +206,7 @@ class PreviewDialog(QDialog):
                 combo.addItems(["Sobrescribir", "Omitir"])
                 combo.setCurrentIndex(1)
                 combo.currentIndexChanged.connect(
-                    lambda idx, r_idx=row: self._on_resolution_changed(r_idx, idx)
+                    lambda idx, r_idx=row: self._al_cambiar_resolucion(r_idx, idx)
                 )
                 self._table.setCellWidget(row, 6, combo)
                 self._row_combos.append(combo)
@@ -218,15 +218,15 @@ class PreviewDialog(QDialog):
                 self._table.setItem(row, 6, QTableWidgetItem("—"))
                 self._row_combos.append(None)
 
-    def _on_resolution_changed(self, row: int, index: int) -> None:
+    def _al_cambiar_resolucion(self, row: int, index: int) -> None:
         if row < len(self._row_checks):
             cb = self._row_checks[row]
             cb.blockSignals(True)
             cb.setChecked(index == 0)
             cb.blockSignals(False)
-            self._update_selection_count()
+            self._actualizar_contador_seleccion()
 
-    def _select_all(self) -> None:
+    def _seleccionar_todo(self) -> None:
         for i, cb in enumerate(self._row_checks):
             if self._row_combos[i] is not None:
                 self._row_combos[i].blockSignals(True)
@@ -234,11 +234,11 @@ class PreviewDialog(QDialog):
                 self._row_combos[i].blockSignals(False)
             cb.setChecked(True)
 
-    def _deselect_all(self) -> None:
+    def _deseleccionar_todo(self) -> None:
         for cb in self._row_checks:
             cb.setChecked(False)
 
-    def _select_matched(self) -> None:
+    def _seleccionar_coincidentes(self) -> None:
         for i, r in enumerate(self._results):
             is_actionable = r.estado in (
                 EstadoClasificacion.EXITO,
@@ -251,11 +251,11 @@ class PreviewDialog(QDialog):
                 self._row_combos[i].blockSignals(False)
             self._row_checks[i].setChecked(is_actionable)
 
-    def _update_selection_count(self) -> None:
+    def _actualizar_contador_seleccion(self) -> None:
         count = sum(1 for cb in self._row_checks if cb.isChecked())
         self._selection_count.setText(f"{count} seleccionados")
 
-    def get_selected_results(self) -> list[ResultadoClasificacion]:
+    def obtener_resultados_seleccionados(self) -> list[ResultadoClasificacion]:
         selected = []
         for r, cb, combo in zip(self._results, self._row_checks, self._row_combos):
             if cb.isChecked():

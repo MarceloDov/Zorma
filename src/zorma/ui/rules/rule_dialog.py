@@ -54,10 +54,10 @@ class RuleDialog(QDialog):
         self.setWindowTitle("Editar Regla" if self._editing else "Nueva Regla")
         self.setMinimumWidth(520)
         self.setModal(True)
-        self._setup_ui()
-        self._load_data()
+        self._configurar_ui()
+        self._cargar_datos()
 
-    def _setup_ui(self) -> None:
+    def _configurar_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
         layout.setContentsMargins(24, 24, 24, 24)
@@ -83,7 +83,7 @@ class RuleDialog(QDialog):
         for ct in TipoCondicion:
             self._condition_type.addItem(CONDITION_LABELS[ct], ct)
         self._condition_type.setAccessibleName("Tipo de condición")
-        self._condition_type.currentIndexChanged.connect(self._on_condition_type_changed)
+        self._condition_type.currentIndexChanged.connect(self._al_cambiar_tipo_condicion)
         form.addRow("Tipo de condición:", self._condition_type)
 
         self._condition_value = QLineEdit()
@@ -98,7 +98,7 @@ class RuleDialog(QDialog):
         self._action_type = QComboBox()
         for at in TipoAccion:
             self._action_type.addItem(ACTION_LABELS[at], at)
-        self._action_type.currentIndexChanged.connect(self._on_action_type_changed)
+        self._action_type.currentIndexChanged.connect(self._al_cambiar_tipo_accion)
         form.addRow("Tipo de acción:", self._action_type)
 
         folder_row = QHBoxLayout()
@@ -110,7 +110,7 @@ class RuleDialog(QDialog):
         browse_btn = QPushButton("Examinar...")
         browse_btn.setObjectName("browse_btn")
         browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        browse_btn.clicked.connect(self._browse_folder)
+        browse_btn.clicked.connect(self._explorar_carpeta)
         folder_row.addWidget(browse_btn)
         form.addRow("Carpeta destino:", folder_row)
 
@@ -121,15 +121,15 @@ class RuleDialog(QDialog):
         self._rename_pattern = QLineEdit()
         self._rename_pattern.setPlaceholderText("{name}_backup{ext}")
         self._rename_pattern.setAccessibleName("Patrón de renombrado")
-        self._rename_pattern.textChanged.connect(self._validate)
+        self._rename_pattern.textChanged.connect(self._validar)
         form.addRow("Patrón de renombrado:", self._rename_pattern)
 
         self._error_label = QLabel("")
         self._error_label.setObjectName("error_label")
         layout.addWidget(self._error_label)
 
-        self._name_input.textChanged.connect(self._validate)
-        self._target_folder.textChanged.connect(self._validate)
+        self._name_input.textChanged.connect(self._validar)
+        self._target_folder.textChanged.connect(self._validar)
 
         layout.addLayout(form)
         layout.addStretch()
@@ -147,18 +147,18 @@ class RuleDialog(QDialog):
         self._save_btn = QPushButton("Guardar Regla")
         self._save_btn.setProperty("class", "primary")
         self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._save_btn.clicked.connect(self._save)
+        self._save_btn.clicked.connect(self._guardar)
         btn_row.addWidget(self._save_btn)
 
         layout.addLayout(btn_row)
 
-        self._validate()
-        self._update_hints()
+        self._validar()
+        self._actualizar_sugerencias()
 
     _SIZE_RE = re.compile(r"(<=?|>=?|==?)\s*(\d+)\s*(KB|MB|GB)?$", re.IGNORECASE)
     _DATE_RE = re.compile(r"(<|>|==?)\s*(\d+)\s*(days|hours|minutes|días|dias|horas|minutos)?$", re.IGNORECASE)
 
-    def _validate(self) -> None:
+    def _validar(self) -> None:
         name = self._name_input.text().strip()
         target = self._target_folder.text().strip()
         cond_val = self._condition_value.text().strip()
@@ -200,11 +200,11 @@ class RuleDialog(QDialog):
         self._error_label.setText("\n".join(errors))
         self._save_btn.setEnabled(not errors)
 
-    def _on_condition_type_changed(self) -> None:
+    def _al_cambiar_tipo_condicion(self) -> None:
 
-        self._update_hints()
+        self._actualizar_sugerencias()
 
-    def _on_action_type_changed(self) -> None:
+    def _al_cambiar_tipo_accion(self) -> None:
         is_rename = self._action_type.currentData() == TipoAccion.RENOMBRAR
         self._rename_pattern.setVisible(is_rename)
         parent = self._rename_pattern.parent()
@@ -213,7 +213,7 @@ class RuleDialog(QDialog):
             if labels:
                 labels[-1].setVisible(is_rename)
 
-    def _update_hints(self) -> None:
+    def _actualizar_sugerencias(self) -> None:
         ct = self._condition_type.currentData()
         hints = {
             TipoCondicion.EXTENSION: "Extensiones separadas por coma, ej. .mp4,.mkv,.avi",
@@ -229,12 +229,12 @@ class RuleDialog(QDialog):
             TipoCondicion.NOMBRE: "report",
         }.get(ct, ""))
 
-    def _browse_folder(self) -> None:
+    def _explorar_carpeta(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Seleccionar carpeta destino")
         if folder:
             self._target_folder.setText(folder)
 
-    def _load_data(self) -> None:
+    def _cargar_datos(self) -> None:
         if self._rule is not None:
             self._name_input.setText(self._rule.nombre)
             self._enabled_check.setChecked(self._rule.habilitada)
@@ -250,9 +250,9 @@ class RuleDialog(QDialog):
             self._target_folder.setText(self._action.carpeta_destino)
             self._rename_pattern.setText(self._action.patron_renombre)
 
-        self._on_action_type_changed()
+        self._al_cambiar_tipo_accion()
 
-    def _save(self) -> None:
+    def _guardar(self) -> None:
         name = self._name_input.text().strip()
         if not name:
             self._name_input.setFocus()

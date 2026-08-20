@@ -22,22 +22,22 @@ class GestorDeshacer:
         self._repo = repo
         self._result_callback: Callable[[ResultadoClasificacion], None] | None = None
 
-    def set_result_callback(self, callback: Callable[[ResultadoClasificacion], None]) -> None:
+    def establecer_callback_resultado(self, callback: Callable[[ResultadoClasificacion], None]) -> None:
         self._result_callback = callback
 
-    def record(self, result: ResultadoClasificacion) -> None:
+    def registrar(self, result: ResultadoClasificacion) -> None:
         if result.estado != EstadoClasificacion.EXITO:
             return
-        self._repo.redo_clear()
+        self._repo.limpiar_rehacer()
         entry = PilaDeshacer(
             tipo_operacion=TipoAccion.MOVER,
             _ruta_origen=result.ruta_origen or Path(),
             _ruta_destino=result.ruta_destino or Path(),
         )
-        self._repo.undo_push(entry)
+        self._repo.apilar_deshacer(entry)
 
-    def undo(self) -> ResultadoClasificacion | None:
-        entry = self._repo.undo_pop()
+    def deshacer(self) -> ResultadoClasificacion | None:
+        entry = self._repo.desapilar_deshacer()
         if entry is None:
             return None
         if entry.revertido:
@@ -50,16 +50,16 @@ class GestorDeshacer:
             estado=EstadoClasificacion.EXITO if success else EstadoClasificacion.ERROR,
         )
         if success:
-            self._repo.redo_push(entry)
-            self._repo.undo_mark_reverted(entry.id)
+            self._repo.apilar_rehacer(entry)
+            self._repo.marcar_deshacer_revertido(entry.id)
             if self._result_callback:
                 self._result_callback(result)
         return result
 
-    def undo_by_source_path(self, source_path: Path) -> ResultadoClasificacion | None:
-        for entry in self._repo.undo_get_all():
+    def deshacer_por_ruta_origen(self, source_path: Path) -> ResultadoClasificacion | None:
+        for entry in self._repo.obtener_todo_deshacer():
             if entry._ruta_origen == source_path and not entry.revertido:
-                removed = self._repo.undo_remove_by_id(entry.id)
+                removed = self._repo.eliminar_deshacer_por_id(entry.id)
                 if removed is not None:
                     success = removed.revertir()
                     result = ResultadoClasificacion(
@@ -69,15 +69,15 @@ class GestorDeshacer:
                         estado=EstadoClasificacion.EXITO if success else EstadoClasificacion.ERROR,
                     )
                     if success:
-                        self._repo.redo_push(removed)
-                        self._repo.undo_mark_reverted(removed.id)
+                        self._repo.apilar_rehacer(removed)
+                        self._repo.marcar_deshacer_revertido(removed.id)
                         if self._result_callback:
                             self._result_callback(result)
                     return result
         return None
 
-    def redo(self) -> ResultadoClasificacion | None:
-        entry = self._repo.redo_pop()
+    def rehacer(self) -> ResultadoClasificacion | None:
+        entry = self._repo.desapilar_rehacer()
         if entry is None:
             return None
         src = entry._ruta_origen
@@ -102,7 +102,7 @@ class GestorDeshacer:
                 src.rename(dest)
             result.estado = EstadoClasificacion.EXITO
             entry.revertido = False
-            self._repo.undo_push(entry)
+            self._repo.apilar_deshacer(entry)
             if self._result_callback:
                 self._result_callback(result)
         except OSError as e:
@@ -110,11 +110,11 @@ class GestorDeshacer:
             result.mensaje_error = str(e)
         return result
 
-    def get_undoable(self) -> list[PilaDeshacer]:
-        return self._repo.undo_get_all()
+    def obtener_pila_deshacer(self) -> list[PilaDeshacer]:
+        return self._repo.obtener_todo_deshacer()
 
-    def can_undo(self) -> bool:
-        return self._repo.undo_size() > 0
+    def puede_deshacer(self) -> bool:
+        return self._repo.tamanio_deshacer() > 0
 
-    def can_redo(self) -> bool:
-        return self._repo.redo_size() > 0
+    def puede_rehacer(self) -> bool:
+        return self._repo.tamanio_rehacer() > 0

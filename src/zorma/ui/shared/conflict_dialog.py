@@ -31,9 +31,9 @@ class ConflictDialog(QDialog):
         self.setWindowTitle("Conflictos Detectados")
         self.setMinimumSize(640, 450)
         self.setModal(True)
-        self._setup_ui()
+        self._configurar_ui()
 
-    def _setup_ui(self) -> None:
+    def _configurar_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING["2xl"], SPACING["2xl"], SPACING["2xl"], SPACING["2xl"])
         layout.setSpacing(SPACING["md"])
@@ -72,14 +72,14 @@ class ConflictDialog(QDialog):
             vhdr.setDefaultSectionSize(36)
         layout.addWidget(self._table, 1)
 
-        self._populate()
+        self._poblar()
 
         self._overwrite_cb = QCheckBox("Sobrescribir todo")
-        self._overwrite_cb.toggled.connect(self._on_overwrite_toggle)
+        self._overwrite_cb.toggled.connect(self._al_alternar_sobrescribir)
         layout.addWidget(self._overwrite_cb)
 
         self._skip_cb = QCheckBox("Omitir todos los conflictos")
-        self._skip_cb.toggled.connect(self._on_skip_toggle)
+        self._skip_cb.toggled.connect(self._al_alternar_omitir)
         layout.addWidget(self._skip_cb)
 
         btn_row = QHBoxLayout()
@@ -99,7 +99,7 @@ class ConflictDialog(QDialog):
 
         layout.addLayout(btn_row)
 
-    def _populate(self) -> None:
+    def _poblar(self) -> None:
         for c in self._conflicts:
             row = self._table.rowCount()
             self._table.insertRow(row)
@@ -109,20 +109,20 @@ class ConflictDialog(QDialog):
             action_text = c.accion_aplicada.tipo_accion.value if c.accion_aplicada else "—"
             self._table.setItem(row, 2, QTableWidgetItem(action_text))
 
-    def _on_overwrite_toggle(self, checked: bool) -> None:
+    def _al_alternar_sobrescribir(self, checked: bool) -> None:
         if checked:
             self._skip_cb.blockSignals(True)
             self._skip_cb.setChecked(False)
             self._skip_cb.blockSignals(False)
 
-    def _on_skip_toggle(self, checked: bool) -> None:
+    def _al_alternar_omitir(self, checked: bool) -> None:
         if checked:
             self._overwrite_cb.blockSignals(True)
             self._overwrite_cb.setChecked(False)
             self._overwrite_cb.blockSignals(False)
 
-    def should_overwrite(self) -> bool:
+    def debe_sobrescribir(self) -> bool:
         return self._overwrite_cb.isChecked()
 
-    def should_skip_all(self) -> bool:
+    def debe_omitir_todo(self) -> bool:
         return self._skip_cb.isChecked()

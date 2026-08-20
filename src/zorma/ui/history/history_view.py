@@ -28,9 +28,9 @@ class HistoryView(QWidget):
         self._repo = repo
         self._all_entries: list[dict] = []
         self._visible_count = 0
-        self._setup_ui()
+        self._configurar_ui()
 
-    def _setup_ui(self) -> None:
+    def _configurar_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING["3xl"], SPACING["2xl"], SPACING["3xl"], SPACING["2xl"])
         layout.setSpacing(SPACING["xl"])
@@ -44,7 +44,7 @@ class HistoryView(QWidget):
         refresh_btn.setProperty("class", "secondary")
         refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         refresh_btn.setAccessibleName("Actualizar historial")
-        refresh_btn.clicked.connect(self._load_history)
+        refresh_btn.clicked.connect(self._cargar_historial)
         header_row.addStretch()
         header_row.addWidget(refresh_btn)
         layout.addLayout(header_row)
@@ -74,7 +74,7 @@ class HistoryView(QWidget):
         self._load_more_btn.setProperty("class", "secondary")
         self._load_more_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._load_more_btn.setAccessibleName("Cargar más registros")
-        self._load_more_btn.clicked.connect(self._load_more)
+        self._load_more_btn.clicked.connect(self._cargar_mas)
         button_row = QHBoxLayout()
         button_row.addStretch()
         button_row.addWidget(self._load_more_btn)
@@ -90,9 +90,9 @@ class HistoryView(QWidget):
         )
         layout.addWidget(self._empty_state)
 
-        self._load_history()
+        self._cargar_historial()
 
-    def _load_history(self) -> None:
+    def _cargar_historial(self) -> None:
         self._table.setRowCount(0)
         self._visible_count = 0
 
@@ -102,7 +102,7 @@ class HistoryView(QWidget):
             self._empty_state.show()
             return
 
-        results = self._repo.get_history()
+        results = self._repo.obtener_historial()
         if not results:
             self._table.hide()
             self._load_more_btn.hide()
@@ -124,9 +124,9 @@ class HistoryView(QWidget):
 
         self._table.show()
         self._empty_state.hide()
-        self._load_more()
+        self._cargar_mas()
 
-    def _load_more(self) -> None:
+    def _cargar_mas(self) -> None:
         start = self._visible_count
         batch = list(reversed(self._all_entries))[start:start + PAGE_SIZE]
         if not batch:
