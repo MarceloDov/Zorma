@@ -14,14 +14,14 @@ from ...core.models.evento_archivo import EventoArchivo
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ...core.models.filter_config import FilterConfig
+    from ...core.models.configuracion_filtro import ConfiguracionFiltro
 
 logger = logging.getLogger(__name__)
 
 DEBOUNCE_DELAY = 0.3
 
 
-class DebounceCallback:
+class CallbackAntirebote:
     def __init__(self, callback: Callable[[EventoArchivo], None], delay: float = DEBOUNCE_DELAY) -> None:
         self._callback = callback
         self._delay = delay
@@ -65,11 +65,11 @@ class DebounceCallback:
                 logger.exception("Error al vaciar evento debounceado")
 
 
-class ZormaEventHandler(PatternMatchingEventHandler):
+class ManejadorEventosZorma(PatternMatchingEventHandler):
     def __init__(
         self,
         callback: Callable[[EventoArchivo], None],
-        filter_config: FilterConfig | None = None,
+        filter_config: ConfiguracionFiltro | None = None,
         ignore_patterns: list[str] | None = None,
     ) -> None:
         super().__init__(ignore_directories=False, ignore_patterns=ignore_patterns, case_sensitive=False)
@@ -105,12 +105,12 @@ class ZormaEventHandler(PatternMatchingEventHandler):
             logger.exception("Error processing file event: %s", src)
 
 
-class WatchdogFileWatcher:
+class VigilanteArchivosWatchdog:
     def __init__(self) -> None:
         self._observer: Observer | None = None # type: ignore
-        self._handlers: list[ZormaEventHandler] = []
-        self._filter_config: FilterConfig | None = None
-        self._debounced: DebounceCallback | None = None
+        self._handlers: list[ManejadorEventosZorma] = []
+        self._filter_config: ConfiguracionFiltro | None = None
+        self._debounced: CallbackAntirebote | None = None
 
     def iniciar(
         self, paths: list[Path], callback: Callable[[EventoArchivo], None], excluded_patterns: list[str] | None = None
@@ -120,9 +120,9 @@ class WatchdogFileWatcher:
 
         self._observer = Observer()
         self._handlers = []
-        self._debounced = DebounceCallback(callback)
+        self._debounced = CallbackAntirebote(callback)
 
-        handler = ZormaEventHandler(self._debounced, self._filter_config, ignore_patterns=excluded_patterns)
+        handler = ManejadorEventosZorma(self._debounced, self._filter_config, ignore_patterns=excluded_patterns)
         self._handlers.append(handler)
         for p in paths:
             resolved = p.resolve()
@@ -143,7 +143,7 @@ class WatchdogFileWatcher:
     def esta_activo(self) -> bool:
         return self._observer is not None and self._observer.is_alive()
 
-    def actualizar_filtro(self, filter_config: FilterConfig | None) -> None:
+    def actualizar_filtro(self, filter_config: ConfiguracionFiltro | None) -> None:
         self._filter_config = filter_config
         for handler in self._handlers:
             handler.filter_config = filter_config

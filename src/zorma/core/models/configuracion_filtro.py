@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class FilterConfig:
+class ConfiguracionFiltro:
     include_extensions: set[str] | None = None
     exclude_extensions: set[str] | None = None
     max_size: int | None = None

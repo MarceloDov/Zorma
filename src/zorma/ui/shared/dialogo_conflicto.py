@@ -18,7 +18,7 @@ from ...core.models.resultado_clasificacion import ResultadoClasificacion
 from ..shared.styles import SPACING
 
 
-class ConflictDialog(QDialog):
+class DialogoConflicto(QDialog):
     def __init__(
         self,
         conflicts: list[ResultadoClasificacion],

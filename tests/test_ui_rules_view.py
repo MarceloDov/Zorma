@@ -10,8 +10,8 @@ from zorma.adapters.persistence.zorma_repository import ZormaRepository
 from zorma.core.models.accion_regla import AccionRegla
 from zorma.core.models.enums import TipoAccion, TipoCondicion
 from zorma.core.models.regla import Regla
-from zorma.ui.rules.rules_view import RulesView
-from zorma.ui.shared.widgets import EmptyState
+from zorma.ui.rules.vista_reglas import VistaReglas
+from zorma.ui.shared.widgets import EstadoVacio
 
 
 @pytest.fixture
@@ -32,17 +32,17 @@ def sample_action() -> AccionRegla:
 class TestRulesView:
     def test_shows_empty_state_when_no_rules(self, qtbot, repo: MagicMock):
         repo.obtener_todas_las_reglas.return_value = []
-        view = RulesView(Path("/tmp"), repo)
+        view = VistaReglas(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
-        empty = view.findChild(EmptyState)
+        empty = view.findChild(EstadoVacio)
         assert empty is not None
         assert empty.isVisible()
 
     def test_shows_table_when_rules_exist(self, qtbot, repo: MagicMock, sample_rule: Regla, sample_action: AccionRegla):
         repo.obtener_todas_las_reglas.return_value = [sample_rule]
         repo.obtener_acciones_de_regla.return_value = [sample_action]
-        view = RulesView(Path("/tmp"), repo)
+        view = VistaReglas(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
         table = view.findChild(QTableWidget)
@@ -52,7 +52,7 @@ class TestRulesView:
     def test_table_contains_rule_name(self, qtbot, repo: MagicMock, sample_rule: Regla, sample_action: AccionRegla):
         repo.obtener_todas_las_reglas.return_value = [sample_rule]
         repo.obtener_acciones_de_regla.return_value = [sample_action]
-        view = RulesView(Path("/tmp"), repo)
+        view = VistaReglas(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
         table = view.findChild(QTableWidget)
@@ -62,7 +62,7 @@ class TestRulesView:
 
     def test_add_button_creates_rule(self, qtbot, repo: MagicMock, sample_rule: Regla, sample_action: AccionRegla):
         repo.obtener_todas_las_reglas.return_value = []
-        view = RulesView(Path("/tmp"), repo)
+        view = VistaReglas(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
         # Click new rule button
@@ -77,7 +77,7 @@ class TestRulesView:
     def test_delete_button_removes_rule(self, qtbot, repo: MagicMock, sample_rule: Regla, sample_action: AccionRegla):
         repo.obtener_todas_las_reglas.return_value = [sample_rule]
         repo.obtener_acciones_de_regla.return_value = [sample_action]
-        view = RulesView(Path("/tmp"), repo)
+        view = VistaReglas(Path("/tmp"), repo)
         qtbot.addWidget(view)
         view.show()
         table = view.findChild(QTableWidget)
@@ -90,7 +90,7 @@ class TestRulesView:
         assert table.rowCount() == 0
 
     def test_set_repository_loads_rules(self, qtbot, repo: MagicMock, sample_rule: Regla, sample_action: AccionRegla):
-        view = RulesView(Path("/tmp"))
+        view = VistaReglas(Path("/tmp"))
         qtbot.addWidget(view)
         view.show()
         repo.obtener_todas_las_reglas.return_value = [sample_rule]

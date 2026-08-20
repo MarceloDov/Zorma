@@ -16,12 +16,12 @@ from PyQt6.QtWidgets import (
 
 from ...adapters.persistence.zorma_repository import ZormaRepository
 from ..shared.styles import SPACING
-from ..shared.widgets import EmptyState
+from ..shared.widgets import EstadoVacio
 
 PAGE_SIZE = 100
 
 
-class HistoryView(QWidget):
+class VistaHistorial(QWidget):
     def __init__(self, data_dir: Path | None = None, repo: ZormaRepository | None = None) -> None:
         super().__init__()
         self._data_dir = data_dir or Path.home() / ".zorma"
@@ -83,7 +83,7 @@ class HistoryView(QWidget):
         button_layout.addLayout(button_row)
         layout.addLayout(button_layout)
 
-        self._empty_state = EmptyState(
+        self._empty_state = EstadoVacio(
             icon="📋",
             title="Sin historial aún",
             description="Inicie el monitor para empezar a registrar clasificaciones de archivos.",

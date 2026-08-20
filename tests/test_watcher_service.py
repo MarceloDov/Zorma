@@ -2,18 +2,18 @@ from pathlib import Path
 from unittest.mock import MagicMock, create_autospec
 
 from zorma.adapters.persistence.zorma_repository import ZormaRepository
-from zorma.adapters.watcher.watchdog_watcher import WatchdogFileWatcher
+from zorma.adapters.watcher.vigilante_watchdog import VigilanteArchivosWatchdog
 from zorma.core.models.accion_regla import AccionRegla
+from zorma.core.models.configuracion_filtro import ConfiguracionFiltro
 from zorma.core.models.enums import EstadoClasificacion, TipoAccion, TipoCondicion, TipoEvento
 from zorma.core.models.evento_archivo import EventoArchivo
-from zorma.core.models.filter_config import FilterConfig
 from zorma.core.models.regla import Regla
 from zorma.core.services.servicio_clasificacion import ServicioClasificacion
 
 
 class TestWatcherService:
     def setup_method(self) -> None:
-        self.watcher = create_autospec(WatchdogFileWatcher)
+        self.watcher = create_autospec(VigilanteArchivosWatchdog)
         self.repo = create_autospec(ZormaRepository, instance=True)
         self.service = ServicioClasificacion(self.watcher, self.repo)
 
@@ -25,7 +25,7 @@ class TestWatcherService:
 
     def test_start_monitoring_with_filter(self) -> None:
         paths = [Path("/watch")]
-        cfg = FilterConfig(include_extensions=[".txt"])
+        cfg = ConfiguracionFiltro(include_extensions=[".txt"])
         self.service.iniciar_monitoreo(paths, cfg)
         self.watcher.actualizar_filtro.assert_called_once_with(cfg)
         self.watcher.iniciar.assert_called_once()
@@ -98,7 +98,7 @@ class TestWatcherService:
         f2 = tmp_path / "b.pdf"
         f1.write_text("a")
         f2.write_text("b")
-        cfg = FilterConfig(include_extensions=[".txt"])
+        cfg = ConfiguracionFiltro(include_extensions=[".txt"])
         self.repo.obtener_todas_las_reglas.return_value = []
         results = self.service._escaneo_inicial([tmp_path], cfg)
         assert len(results) == 1
@@ -147,7 +147,7 @@ class TestWatcherService:
         f2 = tmp_path / "b.pdf"
         f1.write_text("a")
         f2.write_text("b")
-        cfg = FilterConfig(include_extensions=[".txt"])
+        cfg = ConfiguracionFiltro(include_extensions=[".txt"])
         self.repo.obtener_todas_las_reglas.return_value = []
         results = self.service.previsualizar_todos([tmp_path], cfg)
         assert len(results) == 1

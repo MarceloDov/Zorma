@@ -11,7 +11,7 @@ from ...core.models.resultado_clasificacion import ResultadoClasificacion
 from .styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, boton_secundario
 
 
-class SidebarButton(QPushButton):
+class BotonBarraLateral(QPushButton):
     def __init__(
         self,
         text: str,
@@ -37,7 +37,7 @@ class SidebarButton(QPushButton):
 
 
 
-class Card(QFrame):
+class Tarjeta(QFrame):
     def __init__(
         self,
         title: str,
@@ -49,7 +49,7 @@ class Card(QFrame):
         self.setObjectName("card")
         self.setProperty("level", level)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setAccessibleName(f"Card: {title}")
+        self.setAccessibleName(f"Tarjeta: {title}")
         self.setAccessibleDescription(f"Value: {value}")
 
         layout = QVBoxLayout(self)
@@ -75,7 +75,7 @@ class Card(QFrame):
 
 
 
-class TimelineRow(QWidget):
+class FilaLineaTiempo(QWidget):
     undo_clicked = pyqtSignal(object)
 
     def __init__(self, result: ResultadoClasificacion, can_undo: bool = False, parent: QWidget | None = None) -> None:
@@ -161,11 +161,11 @@ class TimelineRow(QWidget):
             layout.addWidget(undo_btn)
 
         self.setStyleSheet(f"""
-            TimelineRow {{
+            FilaLineaTiempo {{
                 background-color: transparent;
                 border-bottom: 1px solid {COLORS['border']};
             }}
-            TimelineRow:hover {{
+            FilaLineaTiempo:hover {{
                 background-color: {COLORS['card_hover']};
             }}
         """)
@@ -177,7 +177,7 @@ class TimelineRow(QWidget):
         return self._result
 
 
-class TimelineFeed(QScrollArea):
+class ListaLineaTiempo(QScrollArea):
     undo_requested = pyqtSignal(ResultadoClasificacion)
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -202,7 +202,7 @@ class TimelineFeed(QScrollArea):
 
         self.setWidget(self._container)
 
-        self._empty_icon = EmptyState(
+        self._empty_icon = EstadoVacio(
             icon="📂",
             title="Sin actividad aún",
             description="Seleccione una carpeta y clasifique archivos para ver la actividad aquí.",
@@ -218,7 +218,7 @@ class TimelineFeed(QScrollArea):
                 pass
             self._empty_icon_hidden = True
 
-        row = TimelineRow(result, can_undo)
+        row = FilaLineaTiempo(result, can_undo)
         row.undo_clicked.connect(self.undo_requested)
         self._layout.insertWidget(self._layout.count() - 1, row)
 
@@ -247,7 +247,7 @@ class TimelineFeed(QScrollArea):
         self._layout.insertWidget(0, self._empty_icon)
 
 
-class EmptyState(QWidget):
+class EstadoVacio(QWidget):
     def __init__(
         self,
         icon: str,
@@ -302,7 +302,7 @@ class EmptyState(QWidget):
             self._button.clicked.connect(callback)
 
 
-class OnboardingWidget(QFrame):
+class WidgetBienvenida(QFrame):
     folder_requested = pyqtSignal()
     rules_requested = pyqtSignal()
     start_requested = pyqtSignal()

@@ -19,14 +19,14 @@ from PyQt6.QtWidgets import (
 from ...adapters.persistence.zorma_repository import ZormaRepository
 from ...core.services.gestor_deshacer import GestorDeshacer
 from ...core.services.servicio_clasificacion import ServicioClasificacion
-from ..shared.preview_dialog import PreviewDialog
+from ..shared.aviso import mostrar_aviso
+from ..shared.dialogo_vista_previa import DialogoVistaPrevia
 from ..shared.styles import COLORS, SPACING
-from ..shared.toast import mostrar_toast
-from ..shared.widgets import Card, OnboardingWidget, TimelineFeed
-from .dashboard_viewmodel import DashboardViewModel
+from ..shared.widgets import ListaLineaTiempo, Tarjeta, WidgetBienvenida
+from .inicio_viewmodel import InicioViewModel
 
 
-class DashboardView(QWidget):
+class VistaInicio(QWidget):
     watcher_status_changed = pyqtSignal(str, str)
     folder_selected = pyqtSignal(Path)
     navigate_requested = pyqtSignal(int)
@@ -39,7 +39,7 @@ class DashboardView(QWidget):
     ) -> None:
         super().__init__()
         data_dir_resolved = data_dir or Path.home() / ".zorma"
-        self._vm = DashboardViewModel(data_dir_resolved, repo, gestor_deshacer)
+        self._vm = InicioViewModel(data_dir_resolved, repo, gestor_deshacer)
         self._watcher_service: ServicioClasificacion | None = None
         self._scan_pending_results: list = []
         self._configurar_ui()
@@ -60,7 +60,7 @@ class DashboardView(QWidget):
 
         layout.addWidget(self._crear_encabezado())
 
-        self._onboarding = OnboardingWidget()
+        self._onboarding = WidgetBienvenida()
         self._onboarding.folder_requested.connect(self._elegir_carpeta)
         self._onboarding.rules_requested.connect(lambda: self.navigate_requested.emit(1))
         self._onboarding.start_requested.connect(self._al_clic_accion)
@@ -79,11 +79,11 @@ class DashboardView(QWidget):
 
     def _crear_tarjetas(self) -> QHBoxLayout:
         rules_count = self._vm.obtener_cantidad_reglas()
-        self._card_total = Card("Clasificados", "0", "brand")
+        self._card_total = Tarjeta("Clasificados", "0", "brand")
         self._card_total.setObjectName("card_total")
-        self._card_rules = Card("Reglas Activas", rules_count, "success")
+        self._card_rules = Tarjeta("Reglas Activas", rules_count, "success")
         self._card_rules.setObjectName("card_rules")
-        self._card_errors = Card("Errores", "0", "error")
+        self._card_errors = Tarjeta("Errores", "0", "error")
         self._card_errors.setObjectName("card_errors")
 
         cards = QHBoxLayout()
@@ -181,7 +181,7 @@ class DashboardView(QWidget):
         timeline_header_row.addWidget(self._undo_btn)
         layout.addLayout(timeline_header_row)
 
-        self._timeline = TimelineFeed()
+        self._timeline = ListaLineaTiempo()
         self._timeline.undo_requested.connect(self._al_deshacer_archivo)
         layout.addWidget(self._timeline, 1)
         return layout
@@ -283,7 +283,7 @@ class DashboardView(QWidget):
         self.watcher_status_changed.emit(text, color)
 
     def _al_mostrar_toast_vm(self, message: str, color: str) -> None:
-        mostrar_toast(message, color)
+        mostrar_aviso(message, color)
 
     def _al_resultados_escaneo_preview(self, results: list) -> None:
         self._scan_pending_results = results
@@ -291,13 +291,13 @@ class DashboardView(QWidget):
         if watch_path is None:
             return
 
-        dlg = PreviewDialog(results, watch_path, self)
+        dlg = DialogoVistaPrevia(results, watch_path, self)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
 
         selected = dlg.obtener_resultados_seleccionados()
         if not selected:
-            mostrar_toast("Ningún archivo seleccionado", COLORS["text_muted"])
+            mostrar_aviso("Ningún archivo seleccionado", COLORS["text_muted"])
             return
         self._vm.iniciar_clasificacion(selected)
 
@@ -354,7 +354,7 @@ class DashboardView(QWidget):
         self._timeline.limpiar()
         if undone > 0:
             msg = f"↩ {undone} movimiento{'s' if undone != 1 else ''} revertido{'s' if undone != 1 else ''}"
-            mostrar_toast(msg, COLORS["warning"])
+            mostrar_aviso(msg, COLORS["warning"])
 
     def _al_rehacer_todo(self) -> None:
         reply = QMessageBox.question(
@@ -369,7 +369,7 @@ class DashboardView(QWidget):
         redone = self._vm.rehacer_todo()
         if redone > 0:
             msg = f"↪ {redone} movimiento{'s' if redone != 1 else ''} re-aplicado{'s' if redone != 1 else ''}"
-            mostrar_toast(msg, COLORS["primary"])
+            mostrar_aviso(msg, COLORS["primary"])
 
     def _actualizar_boton_accion(self) -> None:
         if self._vm.esta_clasificando:

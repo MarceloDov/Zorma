@@ -17,20 +17,20 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ...adapters.notifications.pyqt_notification_adapter import PyQtNotificationAdapter
+from ...adapters.notifications.adaptador_notificacion_pyqt import AdaptadorNotificacionPyQt
 from ...config.settings import DEFAULT_DISK_ALERT_THRESHOLD, DISK_CHECK_INTERVAL
 from ...core.models.enums import UrgenciaNotificacion
+from ..shared.aviso import mostrar_aviso
 from ..shared.styles import COLORS, SPACING
-from ..shared.toast import mostrar_toast
-from ..shared.widgets import Card
+from ..shared.widgets import Tarjeta
 
 
-class SettingsView(QWidget):
+class VistaConfiguracion(QWidget):
     def __init__(self, data_dir: Path | None = None) -> None:
         super().__init__()
         self._data_dir = data_dir or Path.home() / ".zorma"
         self._config_file = self._data_dir / "app_config.json"
-        self._notification_service: PyQtNotificationAdapter | None = None
+        self._notification_service: AdaptadorNotificacionPyQt | None = None
         self._disk_threshold = DEFAULT_DISK_ALERT_THRESHOLD
         self._notifications_enabled = True
         self._sound_enabled = True
@@ -44,7 +44,7 @@ class SettingsView(QWidget):
         self._configurar_ui()
         self._verificar_espacio_disco()
 
-    def establecer_servicio_notificacion(self, service: PyQtNotificationAdapter) -> None:
+    def establecer_servicio_notificacion(self, service: AdaptadorNotificacionPyQt) -> None:
         self._notification_service = service
 
     def _cargar_configuracion(self) -> None:
@@ -78,8 +78,8 @@ class SettingsView(QWidget):
 
         cards_row = QHBoxLayout()
         cards_row.setSpacing(16)
-        self._disk_card = Card("Espacio Libre", "Verificando...", COLORS["primary"])
-        self._alerts_card = Card("Alertas Activas", "0", COLORS["warning"])
+        self._disk_card = Tarjeta("Espacio Libre", "Verificando...", COLORS["primary"])
+        self._alerts_card = Tarjeta("Alertas Activas", "0", COLORS["warning"])
         cards_row.addWidget(self._disk_card)
         cards_row.addWidget(self._alerts_card)
         layout.addLayout(cards_row)
@@ -161,7 +161,7 @@ class SettingsView(QWidget):
                 self._no_alerts_label.setProperty("level", "warning")
                 self._no_alerts_label.style().unpolish(self._no_alerts_label)
                 self._no_alerts_label.style().polish(self._no_alerts_label)
-                # Note: Card disk style needs special handling or refactor to use setProperty
+                # Note: Tarjeta disk style needs special handling or refactor to use setProperty
                 # Temporarily leave it as is or handle it similarly
                 self._disk_card.setProperty("level", "warning")
                 self._disk_card.style().unpolish(self._disk_card)
@@ -191,4 +191,4 @@ class SettingsView(QWidget):
         self._config["sound_enabled"] = self._sound_check.isChecked()
         self._config["disk_alert_threshold_mb"] = self._disk_spin.value()
         self._guardar_configuracion()
-        mostrar_toast("Configuración guardada", COLORS["success"])
+        mostrar_aviso("Configuración guardada", COLORS["success"])

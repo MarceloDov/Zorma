@@ -19,21 +19,21 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..adapters.notifications.pyqt_notification_adapter import PyQtNotificationAdapter
+from ..adapters.notifications.adaptador_notificacion_pyqt import AdaptadorNotificacionPyQt
 from ..adapters.persistence.zorma_repository import ZormaRepository
 from ..config.settings import APP_NAME, ICONS_DIR
 from ..core.services.gestor_deshacer import GestorDeshacer
 from ..core.services.servicio_clasificacion import ServicioClasificacion
-from .dashboard.dashboard_view import DashboardView
-from .history.history_view import HistoryView
-from .rules.rules_view import RulesView
-from .settings.settings_view import SettingsView
+from .dashboard.vista_inicio import VistaInicio
+from .history.vista_historial import VistaHistorial
+from .rules.vista_reglas import VistaReglas
+from .settings.vista_configuracion import VistaConfiguracion
+from .shared.aviso import mostrar_aviso
 from .shared.styles import COLORS, construir_qss, establecer_tema
-from .shared.toast import mostrar_toast
-from .shared.widgets import SidebarButton
+from .shared.widgets import BotonBarraLateral
 
 
-class MainWindow(QMainWindow):
+class VentanaPrincipal(QMainWindow):
     def __init__(
         self,
         data_dir: Path | None = None,
@@ -48,8 +48,8 @@ class MainWindow(QMainWindow):
         self._gestor_deshacer = gestor_deshacer
         self._status_label: QLabel | None = None
         self._tray_icon: QSystemTrayIcon | None = None
-        self._dashboard_view: DashboardView | None = None
-        self._settings_view: SettingsView | None = None
+        self._dashboard_view: VistaInicio | None = None
+        self._settings_view: VistaConfiguracion | None = None
         self._theme_btn: QPushButton | None = None
         self._nav_anim: QPropertyAnimation | None = None
 
@@ -94,7 +94,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(logo)
 
         self._inicializar_vistas()
-        self._nav_buttons: list[SidebarButton] = []
+        self._nav_buttons: list[BotonBarraLateral] = []
         self._nav_stack = QStackedWidget()
         self._nav_stack.addWidget(self._dashboard_view)
         self._nav_stack.addWidget(self._rules_view)
@@ -123,22 +123,22 @@ class MainWindow(QMainWindow):
 
         for i, (label, icon_name) in enumerate(nav_items):
             icon_path = ICONS_DIR / icon_name
-            btn = SidebarButton(label, icon_path)
+            btn = BotonBarraLateral(label, icon_path)
             btn.clicked.connect(lambda checked, idx=i: self._navegar(idx))
             self._nav_buttons.append(btn)
             layout.addWidget(btn)
 
     def _inicializar_vistas(self) -> None:
-        self._rules_view = RulesView(self._data_dir, self._rule_repository)
+        self._rules_view = VistaReglas(self._data_dir, self._rule_repository)
 
-        self._dashboard_view = DashboardView(self._data_dir, self._rule_repository, self._gestor_deshacer)
+        self._dashboard_view = VistaInicio(self._data_dir, self._rule_repository, self._gestor_deshacer)
         if self._watcher_service is not None:
             self._dashboard_view.establecer_servicio_vigilancia(self._watcher_service)
         self._dashboard_view.watcher_status_changed.connect(self._al_estado_vigilancia)
         self._dashboard_view.navigate_requested.connect(self._navegar)
 
-        self._settings_view = SettingsView(self._data_dir)
-        self._history_view = HistoryView(self._data_dir, self._rule_repository)
+        self._settings_view = VistaConfiguracion(self._data_dir)
+        self._history_view = VistaHistorial(self._data_dir, self._rule_repository)
 
     def _construir_contenido(self) -> QFrame:
         content = QFrame()
@@ -183,13 +183,13 @@ class MainWindow(QMainWindow):
         if self._gestor_deshacer is not None:
             result = self._gestor_deshacer.deshacer()
             if result is not None:
-                mostrar_toast("↩ Archivo restaurado exitosamente", COLORS["success"])
+                mostrar_aviso("↩ Archivo restaurado exitosamente", COLORS["success"])
 
     def _atajo_rehacer(self) -> None:
         if self._gestor_deshacer is not None:
             result = self._gestor_deshacer.rehacer()
             if result is not None:
-                mostrar_toast("↪ Archivo reclasificado exitosamente", COLORS["success"])
+                mostrar_aviso("↪ Archivo reclasificado exitosamente", COLORS["success"])
 
     def _atajo_nueva_regla(self) -> None:
         self._navegar(1)
@@ -230,7 +230,7 @@ class MainWindow(QMainWindow):
         self._tray_icon.activated.connect(self._al_activar_bandeja)
 
         if self._settings_view is not None:
-            adapter = PyQtNotificationAdapter(self._tray_icon)
+            adapter = AdaptadorNotificacionPyQt(self._tray_icon)
             self._settings_view.establecer_servicio_notificacion(adapter)
 
         self._tray_icon.show()

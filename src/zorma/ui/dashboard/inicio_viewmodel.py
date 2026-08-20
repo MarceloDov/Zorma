@@ -14,7 +14,7 @@ from ...core.services.servicio_clasificacion import ServicioClasificacion
 from ..shared.styles import COLORS
 
 
-class ScanWorker(QThread):
+class TrabajadorEscaneo(QThread):
     """Worker para realizar escaneos de archivos en segundo plano."""
     scan_finished = pyqtSignal(list)
 
@@ -38,7 +38,7 @@ class ScanWorker(QThread):
             self.scan_finished.emit(results)
 
 
-class ClassifyWorker(QThread):
+class TrabajadorClasificacion(QThread):
     """Worker para realizar la clasificación de archivos en segundo plano."""
     progress = pyqtSignal(int, int)
     file_done = pyqtSignal(object)
@@ -77,7 +77,7 @@ class ClassifyWorker(QThread):
         self.classify_finished.emit(success_count, error_count)
 
 
-class DashboardViewModel(QObject):
+class InicioViewModel(QObject):
     """ViewModel del Dashboard. Gestiona estado, workers, settings, undo y watcher."""
 
     watch_path_changed = pyqtSignal(object)
@@ -110,8 +110,8 @@ class DashboardViewModel(QObject):
         self._classifying = False
         self._watcher_running = False
         self._auto_classify = False
-        self._scan_worker: ScanWorker | None = None
-        self._classify_worker: ClassifyWorker | None = None
+        self._scan_worker: TrabajadorEscaneo | None = None
+        self._classify_worker: TrabajadorClasificacion | None = None
         self._cargar_configuracion()
 
     # --- Settings ---
@@ -177,7 +177,7 @@ class DashboardViewModel(QObject):
         self.status_text.emit("Escaneando archivos...", COLORS["primary"])
         self.progress_changed.emit(0, 0)
 
-        self._scan_worker = ScanWorker(self._watcher_service, [self._watch_path])
+        self._scan_worker = TrabajadorEscaneo(self._watcher_service, [self._watch_path])
         self._scan_worker.scan_finished.connect(self._al_finalizar_escaneo)
         self._scan_worker.start()
 
@@ -205,7 +205,7 @@ class DashboardViewModel(QObject):
         self.status_text.emit("Clasificando...", COLORS["primary"])
         self.progress_changed.emit(0, 100)
 
-        self._classify_worker = ClassifyWorker(self._watcher_service, results)
+        self._classify_worker = TrabajadorClasificacion(self._watcher_service, results)
         self._classify_worker.progress.connect(self._al_progreso_clasificacion)
         self._classify_worker.file_done.connect(self._al_archivo_clasificado)
         self._classify_worker.classify_finished.connect(self._al_finalizar_clasificacion)

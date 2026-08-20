@@ -21,17 +21,17 @@ from ...adapters.persistence.zorma_repository import ZormaRepository
 from ...core.models.accion_regla import AccionRegla
 from ...core.models.enums import TipoAccion, TipoCondicion
 from ...core.models.regla import Regla
+from ..shared.aviso import mostrar_aviso
 from ..shared.styles import SPACING
-from ..shared.toast import mostrar_toast
-from ..shared.widgets import EmptyState
-from .rule_dialog import RuleDialog
-from .rules_viewmodel import RulesViewModel
+from ..shared.widgets import EstadoVacio
+from .dialogo_regla import DialogoRegla
+from .reglas_viewmodel import ReglasViewModel
 
 
-class RulesView(QWidget):
+class VistaReglas(QWidget):
     def __init__(self, data_dir: Path | None = None, repo: ZormaRepository | None = None) -> None:
         super().__init__()
-        self._vm = RulesViewModel(repo)
+        self._vm = ReglasViewModel(repo)
         self._configurar_ui()
         self._conectar_vm()
         if repo is not None:
@@ -42,7 +42,7 @@ class RulesView(QWidget):
 
     def _conectar_vm(self) -> None:
         self._vm.rules_changed.connect(self._al_cambiar_reglas)
-        self._vm.toast_requested.connect(mostrar_toast)
+        self._vm.toast_requested.connect(mostrar_aviso)
 
     def _cargar_reglas(self) -> None:
         self._vm.cargar_reglas()
@@ -123,8 +123,8 @@ class RulesView(QWidget):
         self._table.doubleClicked.connect(self._editar_seleccionada)
         return self._table
 
-    def _crear_etiqueta_vacia(self) -> EmptyState:
-        self._empty_state = EmptyState(
+    def _crear_etiqueta_vacia(self) -> EstadoVacio:
+        self._empty_state = EstadoVacio(
             icon="📝",
             title="Sin reglas definidas",
             description="Cree su primera regla para empezar a clasificar archivos automáticamente.",
@@ -168,7 +168,7 @@ class RulesView(QWidget):
         self._table.setItem(row, 6, QTableWidgetItem("Activa" if rule.habilitada else "Desactivada"))
 
     def _nueva_regla(self) -> None:
-        dlg = RuleDialog(self)
+        dlg = DialogoRegla(self)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.result_rule is not None:
             self._vm.crear_regla(dlg.result_rule, dlg.result_action)
 
@@ -188,7 +188,7 @@ class RulesView(QWidget):
         actions = self._vm.obtener_acciones_de_regla(rule.id)
         action = actions[0] if actions else None
 
-        dlg = RuleDialog(self, rule=rule, action=action)
+        dlg = DialogoRegla(self, rule=rule, action=action)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.result_rule is not None:
             edited = dlg.result_rule
             edited.id = rule.id

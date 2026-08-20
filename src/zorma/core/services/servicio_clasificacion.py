@@ -12,10 +12,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from ...adapters.persistence.zorma_repository import ZormaRepository
-    from ...adapters.watcher.watchdog_watcher import WatchdogFileWatcher
+    from ...adapters.watcher.vigilante_watchdog import VigilanteArchivosWatchdog
     from ..models.accion_regla import AccionRegla
+    from ..models.configuracion_filtro import ConfiguracionFiltro
     from ..models.evento_archivo import EventoArchivo
-    from ..models.filter_config import FilterConfig
     from ..models.regla import Regla
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class ServicioClasificacion:
     def __init__(
         self,
-        watcher: WatchdogFileWatcher,
+        watcher: VigilanteArchivosWatchdog,
         repo: ZormaRepository,
     ) -> None:
         self._watcher = watcher
@@ -40,7 +40,7 @@ class ServicioClasificacion:
     def iniciar_monitoreo(
         self,
         paths: list[Path],
-        filter_config: FilterConfig | None = None,
+        filter_config: ConfiguracionFiltro | None = None,
     ) -> None:
         self._watcher.actualizar_filtro(filter_config)
         excluded_patterns = ["Archivos *"]
@@ -72,7 +72,9 @@ class ServicioClasificacion:
     _SKIP_DIRS = {"node_modules", ".git", "__pycache__", "venv", ".venv", "dist", "build", ".tox", ".mypy_cache"}
 
     @staticmethod
-    def _iterar_archivos(paths: list[Path], filter_config: FilterConfig | None = None) -> Generator[Path, None, None]:
+    def _iterar_archivos(
+        paths: list[Path], filter_config: ConfiguracionFiltro | None = None
+    ) -> Generator[Path, None, None]:
         for base in paths:
             if not base.is_dir():
                 continue
@@ -133,7 +135,7 @@ class ServicioClasificacion:
     def previsualizar_todos(
         self,
         paths: list[Path],
-        filter_config: FilterConfig | None = None,
+        filter_config: ConfiguracionFiltro | None = None,
     ) -> list[ResultadoClasificacion]:
         results: list[ResultadoClasificacion] = []
         for fpath in self._iterar_archivos(paths, filter_config):
@@ -144,7 +146,7 @@ class ServicioClasificacion:
     def _escaneo_inicial(
         self,
         paths: list[Path],
-        filter_config: FilterConfig | None = None,
+        filter_config: ConfiguracionFiltro | None = None,
     ) -> list[ResultadoClasificacion]:
         results: list[ResultadoClasificacion] = []
         for fpath in self._iterar_archivos(paths, filter_config):
