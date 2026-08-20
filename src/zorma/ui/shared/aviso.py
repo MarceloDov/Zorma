@@ -140,7 +140,7 @@ class AvisoEmergente(QWidget):
                 anim.start()
             y += t.height() + gap
 
-    def closeEvent(self, event: object) -> None:
+    def closeEvent(self, event: object) -> None:  # noqa: N802 (override de Qt)
         if self in AvisoEmergente._avisos_activos:
             AvisoEmergente._avisos_activos.remove(self)
         super().closeEvent(event)  # type: ignore[arg-type]

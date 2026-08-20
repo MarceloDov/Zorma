@@ -247,7 +247,7 @@ class VentanaPrincipal(QMainWindow):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self._alternar_visibilidad()
 
-    def closeEvent(self, event: QCloseEvent | None) -> None:
+    def closeEvent(self, event: QCloseEvent | None) -> None:  # noqa: N802 (override de Qt)
         if event is None:
             return
         if self._tray_icon is not None and self._tray_icon.isVisible():
