@@ -27,15 +27,15 @@ class PyQtNotificationAdapter(QObject):
         super().__init__()
         self._tray_icon = tray_icon
         self._enabled = True
-        self._notification_signal.connect(self._show_message)
+        self._notification_signal.connect(self._mostrar_mensaje)
 
-    def set_tray_icon(self, tray_icon: QSystemTrayIcon) -> None:
+    def establecer_icono_bandeja(self, tray_icon: QSystemTrayIcon) -> None:
         """
         Establece o actualiza el icono de la bandeja del sistema.
         """
         self._tray_icon = tray_icon
 
-    def notify(
+    def notificar(
         self,
         title: str,
         message: str,
@@ -56,11 +56,11 @@ class PyQtNotificationAdapter(QObject):
         icon_val = icon_map.get(urgency, QSystemTrayIcon.MessageIcon.Information.value)
         self._notification_signal.emit(title, message, icon_val, duration)
 
-    def _show_message(self, title: str, message: str, icon_val: int, duration: int) -> None:
+    def _mostrar_mensaje(self, title: str, message: str, icon_val: int, duration: int) -> None:
         if self._tray_icon:
             self._tray_icon.showMessage(title, message, QSystemTrayIcon.MessageIcon(icon_val), duration)
 
-    def configure(self, enabled: bool) -> None:
+    def configurar(self, enabled: bool) -> None:
         """
         Configura el estado de las notificaciones.
 

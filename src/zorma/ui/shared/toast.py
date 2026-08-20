@@ -53,7 +53,7 @@ class Toast(QWidget):
                 color: {color};
             }}
         """)
-        close_btn.clicked.connect(self._dismiss)
+        close_btn.clicked.connect(self._descartar)
         row.addWidget(close_btn)
 
         container.setStyleSheet(f"""
@@ -83,16 +83,16 @@ class Toast(QWidget):
 
         self.move(self._start_x + 60, self._start_y)
         Toast._active_toasts.append(self)
-        self._animate_in()
+        self._animar_entrada()
 
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
-        self._timer.timeout.connect(self._dismiss)
+        self._timer.timeout.connect(self._descartar)
         self._timer.start(duration)
 
         self.show()
 
-    def _animate_in(self) -> None:
+    def _animar_entrada(self) -> None:
         self._anim = QPropertyAnimation(self, b"geometry")
         self._anim.setDuration(300)
         start = self.geometry()
@@ -101,7 +101,7 @@ class Toast(QWidget):
         self._anim.setEndValue(end)
         self._anim.start()
 
-    def _animate_out(self) -> None:
+    def _animar_salida(self) -> None:
         if self._dismissing:
             return
         self._dismissing = True
@@ -112,20 +112,20 @@ class Toast(QWidget):
         end = QRect(self._start_x + 80, self._start_y, start.width(), start.height())
         self._anim.setStartValue(start)
         self._anim.setEndValue(end)
-        self._anim.finished.connect(self._cleanup)
+        self._anim.finished.connect(self._limpiar)
         self._anim.start()
 
-    def _dismiss(self) -> None:
-        self._animate_out()
+    def _descartar(self) -> None:
+        self._animar_salida()
 
-    def _cleanup(self) -> None:
+    def _limpiar(self) -> None:
         self.hide()
         if self in Toast._active_toasts:
             Toast._active_toasts.remove(self)
-        Toast._reposition_all(self._parent_widget)
+        Toast._reposicionar_todo(self._parent_widget)
 
     @staticmethod
-    def _reposition_all(parent: QWidget) -> None:
+    def _reposicionar_todo(parent: QWidget) -> None:
         gap = 8
         y = 20
         for t in Toast._active_toasts:
@@ -146,7 +146,7 @@ class Toast(QWidget):
         super().closeEvent(event)  # type: ignore[arg-type]
 
 
-def show_toast(text: str, color: str = COLORS["success"], duration: int = 3000) -> None:
+def mostrar_toast(text: str, color: str = COLORS["success"], duration: int = 3000) -> None:
     parent: QWidget | None = None
     for w in QApplication.topLevelWidgets():
         if w.isVisible():

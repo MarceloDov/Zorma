@@ -23,30 +23,30 @@ class TestGestorDeshacer:
 
     def test_record_success(self) -> None:
         result = self._make_result()
-        self.manager.record(result)
-        self.repo.redo_clear.assert_called_once()
-        self.repo.undo_push.assert_called_once()
+        self.manager.registrar(result)
+        self.repo.limpiar_rehacer.assert_called_once()
+        self.repo.apilar_deshacer.assert_called_once()
 
     def test_record_non_success_ignored(self) -> None:
         result = self._make_result(EstadoClasificacion.ERROR)
-        self.manager.record(result)
-        self.repo.undo_push.assert_not_called()
+        self.manager.registrar(result)
+        self.repo.apilar_deshacer.assert_not_called()
 
     def test_can_undo(self) -> None:
-        self.repo.undo_size.return_value = 1
-        assert self.manager.can_undo()
-        self.repo.undo_size.return_value = 0
-        assert not self.manager.can_undo()
+        self.repo.tamanio_deshacer.return_value = 1
+        assert self.manager.puede_deshacer()
+        self.repo.tamanio_deshacer.return_value = 0
+        assert not self.manager.puede_deshacer()
 
     def test_can_redo(self) -> None:
-        self.repo.redo_size.return_value = 1
-        assert self.manager.can_redo()
-        self.repo.redo_size.return_value = 0
-        assert not self.manager.can_redo()
+        self.repo.tamanio_rehacer.return_value = 1
+        assert self.manager.puede_rehacer()
+        self.repo.tamanio_rehacer.return_value = 0
+        assert not self.manager.puede_rehacer()
 
     def test_undo_returns_none_when_empty(self) -> None:
-        self.repo.undo_pop.return_value = None
-        assert self.manager.undo() is None
+        self.repo.desapilar_deshacer.return_value = None
+        assert self.manager.deshacer() is None
 
     def test_undo_move_success(self, tmp_path: Path) -> None:
         orig = tmp_path / "orig" / "test.txt"
@@ -59,17 +59,17 @@ class TestGestorDeshacer:
             _ruta_origen=orig,
             _ruta_destino=dst,
         )
-        self.repo.undo_pop.return_value = entry
+        self.repo.desapilar_deshacer.return_value = entry
 
-        result = self.manager.undo()
+        result = self.manager.deshacer()
         assert result is not None
         assert result.estado == EstadoClasificacion.EXITO
-        self.repo.undo_mark_reverted.assert_called_once_with(entry.id)
-        self.repo.redo_push.assert_called_once()
+        self.repo.marcar_deshacer_revertido.assert_called_once_with(entry.id)
+        self.repo.apilar_rehacer.assert_called_once()
 
     def test_undo_empty_stack(self) -> None:
-        self.repo.undo_pop.return_value = None
-        result = self.manager.undo()
+        self.repo.desapilar_deshacer.return_value = None
+        result = self.manager.deshacer()
         assert result is None
 
     def test_undo_callback_called(self, tmp_path: Path) -> None:
@@ -83,18 +83,18 @@ class TestGestorDeshacer:
             _ruta_origen=orig,
             _ruta_destino=dst,
         )
-        self.repo.undo_pop.return_value = entry
+        self.repo.desapilar_deshacer.return_value = entry
         callback = MagicMock()
-        self.manager.set_result_callback(callback)
-        self.manager.undo()
+        self.manager.establecer_callback_resultado(callback)
+        self.manager.deshacer()
         callback.assert_called_once()
 
     def test_redo_delegates(self) -> None:
         entry = PilaDeshacer()
-        self.repo.redo_pop.return_value = entry
-        self.manager.redo()
-        self.repo.redo_pop.assert_called_once()
+        self.repo.desapilar_rehacer.return_value = entry
+        self.manager.rehacer()
+        self.repo.desapilar_rehacer.assert_called_once()
 
     def test_redo_empty(self) -> None:
-        self.repo.redo_pop.return_value = None
-        assert self.manager.redo() is None
+        self.repo.desapilar_rehacer.return_value = None
+        assert self.manager.rehacer() is None

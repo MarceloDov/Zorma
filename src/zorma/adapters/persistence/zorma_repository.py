@@ -28,11 +28,11 @@ class ZormaRepository:
         self._file = data_dir / "zorma.json"
         self._undo_limit = undo_limit
         self._data: dict[str, Any] = {}
-        self._load()
+        self._cargar()
 
     # ── persistence ──
 
-    def _default_data(self) -> dict[str, Any]:
+    def _datos_predeterminados(self) -> dict[str, Any]:
         return {
             "schema_version": SCHEMA_VERSION,
             "theme": "dark",
@@ -45,18 +45,18 @@ class ZormaRepository:
             "history": [],
         }
 
-    def _load(self) -> None:
+    def _cargar(self) -> None:
         if not self._file.exists():
-            self._data = self._default_data()
+            self._data = self._datos_predeterminados()
             return
         try:
             raw = json.loads(self._file.read_text(encoding="utf-8"))
-            self._data = {**self._default_data(), **raw}
+            self._data = {**self._datos_predeterminados(), **raw}
         except (json.JSONDecodeError, OSError):
             logger.exception("Failed to load %s, using defaults", self._file)
-            self._data = self._default_data()
+            self._data = self._datos_predeterminados()
 
-    def _save(self) -> None:
+    def _guardar(self) -> None:
         self._file.parent.mkdir(parents=True, exist_ok=True)
         tmp_fd, tmp_path = tempfile.mkstemp(dir=self._file.parent, suffix=".tmp", text=True)
         try:
@@ -73,11 +73,11 @@ class ZormaRepository:
     # ── helpers ──
 
     @staticmethod
-    def _now() -> str:
+    def _ahora() -> str:
         return datetime.now(UTC).isoformat()
 
     @staticmethod
-    def _deserialize_all(entries: list[dict[str, Any]], deserialize: Callable[[dict[str, Any]], T]) -> list[T]:
+    def _deserializar_todo(entries: list[dict[str, Any]], deserialize: Callable[[dict[str, Any]], T]) -> list[T]:
         result = []
         for entry in entries:
             try:
@@ -88,45 +88,45 @@ class ZormaRepository:
 
     # ── rules ──
 
-    def get_all_rules(self) -> list[Regla]:
-        return self._deserialize_all(self._data["rules"], self._deserialize_rule)
+    def obtener_todas_las_reglas(self) -> list[Regla]:
+        return self._deserializar_todo(self._data["rules"], self._deserializar_regla)
 
-    def get_rule_by_id(self, rule_id: str) -> Regla | None:
+    def obtener_regla_por_id(self, rule_id: str) -> Regla | None:
         for r in self._data["rules"]:
             if r["id"] == rule_id:
                 try:
-                    return self._deserialize_rule(r)
+                    return self._deserializar_regla(r)
                 except (KeyError, ValueError) as e:
                     logger.warning("Malformed rule %s: %s", rule_id, e)
                     return None
         return None
 
-    def get_rules_by_group(self, group_id: str) -> list[Regla]:
+    def obtener_reglas_por_grupo(self, group_id: str) -> list[Regla]:
         rules = [r for r in self._data["rules"] if r.get("group_id") == group_id]
-        return self._deserialize_all(rules, self._deserialize_rule)
+        return self._deserializar_todo(rules, self._deserializar_regla)
 
-    def save_rule(self, rule: Regla) -> None:
-        data = self._serialize_rule(rule)
+    def guardar_regla(self, rule: Regla) -> None:
+        data = self._serializar_regla(rule)
         for i, r in enumerate(self._data["rules"]):
             if r["id"] == rule.id:
                 self._data["rules"][i] = data
                 break
         else:
             self._data["rules"].append(data)
-        self._save()
+        self._guardar()
 
-    def delete_rule(self, rule_id: str) -> None:
+    def eliminar_regla(self, rule_id: str) -> None:
         self._data["rules"] = [r for r in self._data["rules"] if r["id"] != rule_id]
         self._data["actions"] = [a for a in self._data["actions"] if a.get("rule_id") != rule_id]
         logger.debug("Deleted rule %s", rule_id)
-        self._save()
+        self._guardar()
 
     # ── groups ──
 
-    def get_groups(self) -> list[GrupoRegla]:
-        return self._deserialize_all(self._data["groups"], self._deserialize_group)
+    def obtener_grupos(self) -> list[GrupoRegla]:
+        return self._deserializar_todo(self._data["groups"], self._deserializar_grupo)
 
-    def save_group(self, group: GrupoRegla) -> None:
+    def guardar_grupo(self, group: GrupoRegla) -> None:
         data = {
             "id": group.id,
             "name": group.nombre,
@@ -134,7 +134,7 @@ class ZormaRepository:
             "priority": group.prioridad,
             "is_default": group.es_predeterminado,
             "created_at": group.creado_en.isoformat() if isinstance(group.creado_en, datetime) else group.creado_en,
-            "updated_at": self._now(),
+            "updated_at": self._ahora(),
         }
         for i, g in enumerate(self._data["groups"]):
             if g["id"] == group.id:
@@ -142,23 +142,23 @@ class ZormaRepository:
                 break
         else:
             self._data["groups"].append(data)
-        self._save()
+        self._guardar()
 
-    def delete_group(self, group_id: str) -> None:
+    def eliminar_grupo(self, group_id: str) -> None:
         rule_ids = {r["id"] for r in self._data["rules"] if r.get("group_id") == group_id}
         self._data["groups"] = [g for g in self._data["groups"] if g["id"] != group_id]
         self._data["rules"] = [r for r in self._data["rules"] if r["id"] not in rule_ids]
         self._data["actions"] = [a for a in self._data["actions"] if a.get("rule_id") not in rule_ids]
         logger.debug("Deleted group %s", group_id)
-        self._save()
+        self._guardar()
 
     # ── actions ──
 
-    def get_actions_for_rule(self, rule_id: str) -> list[AccionRegla]:
+    def obtener_acciones_de_regla(self, rule_id: str) -> list[AccionRegla]:
         actions = [a for a in self._data["actions"] if a.get("rule_id") == rule_id]
-        return self._deserialize_all(actions, self._deserialize_action)
+        return self._deserializar_todo(actions, self._deserializar_accion)
 
-    def save_action(self, action: AccionRegla) -> None:
+    def guardar_accion(self, action: AccionRegla) -> None:
         data = {
             "id": action.id,
             "rule_id": action.id_regla,
@@ -173,98 +173,98 @@ class ZormaRepository:
                 break
         else:
             self._data["actions"].append(data)
-        self._save()
+        self._guardar()
 
-    def create_default_rules(self) -> None:
+    def crear_reglas_predeterminadas(self) -> None:
         group = GrupoRegla(
             nombre="Clasificación Universal Automática",
             descripcion="Agrupa cualquier archivo seguro según su extensión",
             prioridad=1,
             es_predeterminado=True,
         )
-        self.save_group(group)
+        self.guardar_grupo(group)
         rule = Regla(
             id_grupo=group.id,
             nombre="Todas las extensiones",
             tipo_condicion=TipoCondicion.EXTENSION,
             valor_condicion="*",
         )
-        self.save_rule(rule)
+        self.guardar_regla(rule)
         action = AccionRegla(id_regla=rule.id, carpeta_destino="Archivos {ext}")
-        self.save_action(action)
+        self.guardar_accion(action)
 
     # ── undo / redo ──
 
-    def _undo_push(self, stack_key: str, entry: PilaDeshacer) -> None:
-        data = self._serialize_undo(entry)
+    def _apilar_en_pila(self, stack_key: str, entry: PilaDeshacer) -> None:
+        data = self._serializar_deshacer(entry)
         self._data[stack_key].append(data)
         if len(self._data[stack_key]) > self._undo_limit:
             self._data[stack_key].pop(0)
         logger.debug("Pushed to %s: %s", stack_key, entry.id)
-        self._save()
+        self._guardar()
 
-    def _undo_pop(self, stack_key: str) -> PilaDeshacer | None:
+    def _desapilar_de_pila(self, stack_key: str) -> PilaDeshacer | None:
         if not self._data[stack_key]:
             return None
-        entry = self._deserialize_undo(self._data[stack_key].pop())
+        entry = self._deserializar_deshacer(self._data[stack_key].pop())
         logger.debug("Popped from %s: %s", stack_key, entry.id)
-        self._save()
+        self._guardar()
         return entry
 
-    def _undo_clear(self, stack_key: str) -> None:
+    def _limpiar_pila(self, stack_key: str) -> None:
         self._data[stack_key].clear()
-        self._save()
+        self._guardar()
 
-    def undo_push(self, entry: PilaDeshacer) -> None:
-        self._undo_push("undo", entry)
+    def apilar_deshacer(self, entry: PilaDeshacer) -> None:
+        self._apilar_en_pila("undo", entry)
 
-    def undo_pop(self) -> PilaDeshacer | None:
-        return self._undo_pop("undo")
+    def desapilar_deshacer(self) -> PilaDeshacer | None:
+        return self._desapilar_de_pila("undo")
 
-    def undo_peek(self) -> PilaDeshacer | None:
-        return self._deserialize_undo(self._data["undo"][-1]) if self._data["undo"] else None
+    def ver_tope_deshacer(self) -> PilaDeshacer | None:
+        return self._deserializar_deshacer(self._data["undo"][-1]) if self._data["undo"] else None
 
-    def undo_size(self) -> int:
+    def tamanio_deshacer(self) -> int:
         return len(self._data["undo"])
 
-    def undo_clear(self) -> None:
-        self._undo_clear("undo")
+    def limpiar_deshacer(self) -> None:
+        self._limpiar_pila("undo")
 
-    def undo_get_all(self) -> list[PilaDeshacer]:
-        return [self._deserialize_undo(e) for e in reversed(self._data["undo"])]
+    def obtener_todo_deshacer(self) -> list[PilaDeshacer]:
+        return [self._deserializar_deshacer(e) for e in reversed(self._data["undo"])]
 
-    def undo_mark_reverted(self, entry_id: str) -> None:
+    def marcar_deshacer_revertido(self, entry_id: str) -> None:
         for e in self._data["undo"]:
             if e["id"] == entry_id:
                 e["reverted"] = True
-                self._save()
+                self._guardar()
                 return
 
-    def undo_remove_by_id(self, entry_id: str) -> PilaDeshacer | None:
+    def eliminar_deshacer_por_id(self, entry_id: str) -> PilaDeshacer | None:
         for i, e in enumerate(self._data["undo"]):
             if e["id"] == entry_id:
                 removed = self._data["undo"].pop(i)
-                self._save()
-                return self._deserialize_undo(removed)
+                self._guardar()
+                return self._deserializar_deshacer(removed)
         return None
 
-    def redo_push(self, entry: PilaDeshacer) -> None:
-        self._undo_push("redo", entry)
+    def apilar_rehacer(self, entry: PilaDeshacer) -> None:
+        self._apilar_en_pila("redo", entry)
 
-    def redo_pop(self) -> PilaDeshacer | None:
-        return self._undo_pop("redo")
+    def desapilar_rehacer(self) -> PilaDeshacer | None:
+        return self._desapilar_de_pila("redo")
 
-    def redo_clear(self) -> None:
-        self._undo_clear("redo")
+    def limpiar_rehacer(self) -> None:
+        self._limpiar_pila("redo")
 
-    def redo_size(self) -> int:
+    def tamanio_rehacer(self) -> int:
         return len(self._data["redo"])
 
     # ── history ──
 
     HISTORY_LIMIT = 10_000
 
-    def add_history(self, result: ResultadoClasificacion) -> None:
+    def agregar_historial(self, result: ResultadoClasificacion) -> None:
         self._data["history"].append(
             {
                 "file_name": result.nombre_archivo,
@@ -281,9 +281,9 @@ class ZormaRepository:
         )
         if len(self._data["history"]) > self.HISTORY_LIMIT:
             self._data["history"] = self._data["history"][-self.HISTORY_LIMIT :]
-        self._save()
+        self._guardar()
 
-    def get_history(self) -> list[ResultadoClasificacion]:
+    def obtener_historial(self) -> list[ResultadoClasificacion]:
         results = []
         for entry in self._data["history"]:
             try:
@@ -306,16 +306,16 @@ class ZormaRepository:
 
     # ── theme / config ──
 
-    def get_theme(self) -> str:
+    def obtener_tema(self) -> str:
         return str(self._data.get("theme", "dark"))
 
-    def set_theme(self, theme: str) -> None:
+    def establecer_tema(self, theme: str) -> None:
         self._data["theme"] = theme
-        self._save()
+        self._guardar()
 
     # ── serialization ──
 
-    def _serialize_rule(self, r: Regla) -> dict[str, Any]:
+    def _serializar_regla(self, r: Regla) -> dict[str, Any]:
         return {
             "id": r.id,
             "group_id": r.id_grupo,
@@ -327,7 +327,7 @@ class ZormaRepository:
             "created_at": r.creado_en.isoformat(),
         }
 
-    def _deserialize_rule(self, d: dict[str, Any]) -> Regla:
+    def _deserializar_regla(self, d: dict[str, Any]) -> Regla:
         return Regla(
             id=d["id"],
             id_grupo=d.get("group_id", ""),
@@ -339,7 +339,7 @@ class ZormaRepository:
             creado_en=datetime.fromisoformat(d["created_at"]) if "created_at" in d else datetime.now(UTC),
         )
 
-    def _deserialize_group(self, d: dict[str, Any]) -> GrupoRegla:
+    def _deserializar_grupo(self, d: dict[str, Any]) -> GrupoRegla:
         return GrupoRegla(
             id=d["id"],
             nombre=d.get("name", ""),
@@ -349,7 +349,7 @@ class ZormaRepository:
             creado_en=datetime.fromisoformat(d["created_at"]) if "created_at" in d else datetime.now(UTC),
         )
 
-    def _deserialize_action(self, d: dict[str, Any]) -> AccionRegla:
+    def _deserializar_accion(self, d: dict[str, Any]) -> AccionRegla:
         return AccionRegla(
             id=d["id"],
             id_regla=d.get("rule_id", ""),
@@ -360,7 +360,7 @@ class ZormaRepository:
         )
 
     @staticmethod
-    def _serialize_undo(entry: PilaDeshacer) -> dict[str, Any]:
+    def _serializar_deshacer(entry: PilaDeshacer) -> dict[str, Any]:
         return {
             "id": entry.id,
             "source_path": str(entry._ruta_origen),
@@ -371,7 +371,7 @@ class ZormaRepository:
         }
 
     @staticmethod
-    def _deserialize_undo(d: dict[str, Any]) -> PilaDeshacer:
+    def _deserializar_deshacer(d: dict[str, Any]) -> PilaDeshacer:
         entry = PilaDeshacer(
             id=d["id"],
             tipo_operacion=TipoAccion(d.get("action_type", TipoAccion.MOVER.value)),

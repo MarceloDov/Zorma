@@ -19,25 +19,25 @@ class TestWatcherService:
 
     def test_start_monitoring(self) -> None:
         paths = [Path("/watch")]
-        self.service.start_monitoring(paths)
-        self.watcher.update_filter.assert_called_once_with(None)
-        self.watcher.start.assert_called_once()
+        self.service.iniciar_monitoreo(paths)
+        self.watcher.actualizar_filtro.assert_called_once_with(None)
+        self.watcher.iniciar.assert_called_once()
 
     def test_start_monitoring_with_filter(self) -> None:
         paths = [Path("/watch")]
         cfg = FilterConfig(include_extensions=[".txt"])
-        self.service.start_monitoring(paths, cfg)
-        self.watcher.update_filter.assert_called_once_with(cfg)
-        self.watcher.start.assert_called_once()
+        self.service.iniciar_monitoreo(paths, cfg)
+        self.watcher.actualizar_filtro.assert_called_once_with(cfg)
+        self.watcher.iniciar.assert_called_once()
 
     def test_stop_monitoring(self) -> None:
-        self.service.stop_monitoring()
-        self.watcher.stop.assert_called_once()
+        self.service.detener_monitoreo()
+        self.watcher.detener.assert_called_once()
 
     def test_classify_no_rules(self, tmp_path: Path) -> None:
         f = tmp_path / "test.txt"
         f.write_text("hello")
-        self.repo.get_all_rules.return_value = []
+        self.repo.obtener_todas_las_reglas.return_value = []
         result = self.service._clasificar(f)
         assert result.estado == EstadoClasificacion.SIN_REGLA
 
@@ -45,7 +45,7 @@ class TestWatcherService:
         f = tmp_path / "test.txt"
         f.write_text("hello")
         rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".pdf")
-        self.repo.get_all_rules.return_value = [rule]
+        self.repo.obtener_todas_las_reglas.return_value = [rule]
         result = self.service._clasificar(f)
         assert result.estado == EstadoClasificacion.SIN_REGLA
 
@@ -53,8 +53,8 @@ class TestWatcherService:
         f = tmp_path / "test.txt"
         f.write_text("hello")
         rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
-        self.repo.get_all_rules.return_value = [rule]
-        self.repo.get_actions_for_rule.return_value = []
+        self.repo.obtener_todas_las_reglas.return_value = [rule]
+        self.repo.obtener_acciones_de_regla.return_value = []
         result = self.service._clasificar(f)
         assert result.estado == EstadoClasificacion.SIN_REGLA
 
@@ -63,8 +63,8 @@ class TestWatcherService:
         src.write_text("hello")
         rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
         action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino=str(tmp_path / "dest"))
-        self.repo.get_all_rules.return_value = [rule]
-        self.repo.get_actions_for_rule.return_value = [action]
+        self.repo.obtener_todas_las_reglas.return_value = [rule]
+        self.repo.obtener_acciones_de_regla.return_value = [action]
         result = self.service._clasificar(src)
         assert result.estado == EstadoClasificacion.EXITO
         assert result.ruta_destino == tmp_path / "dest" / "test.txt"
@@ -77,11 +77,11 @@ class TestWatcherService:
     def test_on_event_triggers_callback(self, tmp_path: Path) -> None:
         f = tmp_path / "test.txt"
         f.write_text("hello")
-        self.repo.get_all_rules.return_value = []
+        self.repo.obtener_todas_las_reglas.return_value = []
         callback = MagicMock()
-        self.service.set_result_callback(callback)
+        self.service.establecer_callback_resultado(callback)
         event = EventoArchivo(src_path=f, tipo_evento=TipoEvento.CREADO)
-        self.service._on_event(event)
+        self.service._al_evento(event)
         callback.assert_called_once()
 
     def test_initial_scan(self, tmp_path: Path) -> None:
@@ -89,8 +89,8 @@ class TestWatcherService:
         f2 = tmp_path / "b.pdf"
         f1.write_text("a")
         f2.write_text("b")
-        self.repo.get_all_rules.return_value = []
-        results = self.service._initial_scan([tmp_path])
+        self.repo.obtener_todas_las_reglas.return_value = []
+        results = self.service._escaneo_inicial([tmp_path])
         assert len(results) == 2
 
     def test_initial_scan_with_filter(self, tmp_path: Path) -> None:
@@ -99,15 +99,15 @@ class TestWatcherService:
         f1.write_text("a")
         f2.write_text("b")
         cfg = FilterConfig(include_extensions=[".txt"])
-        self.repo.get_all_rules.return_value = []
-        results = self.service._initial_scan([tmp_path], cfg)
+        self.repo.obtener_todas_las_reglas.return_value = []
+        results = self.service._escaneo_inicial([tmp_path], cfg)
         assert len(results) == 1
         assert results[0].nombre_archivo == "a.txt"
 
     def test_preview_no_rules(self, tmp_path: Path) -> None:
         f = tmp_path / "test.txt"
         f.write_text("hello")
-        self.repo.get_all_rules.return_value = []
+        self.repo.obtener_todas_las_reglas.return_value = []
         result = self.service.previsualizar(f)
         assert result.estado == EstadoClasificacion.SIN_REGLA
 
@@ -116,8 +116,8 @@ class TestWatcherService:
         f.write_text("hello")
         rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
         action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino=str(tmp_path / "dest"))
-        self.repo.get_all_rules.return_value = [rule]
-        self.repo.get_actions_for_rule.return_value = [action]
+        self.repo.obtener_todas_las_reglas.return_value = [rule]
+        self.repo.obtener_acciones_de_regla.return_value = [action]
         result = self.service.previsualizar(f)
         assert result.estado == EstadoClasificacion.EXITO
 
@@ -128,8 +128,8 @@ class TestWatcherService:
         dest_file.write_text("existing")
         rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
         action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino=str(tmp_path))
-        self.repo.get_all_rules.return_value = [rule]
-        self.repo.get_actions_for_rule.return_value = [action]
+        self.repo.obtener_todas_las_reglas.return_value = [rule]
+        self.repo.obtener_acciones_de_regla.return_value = [action]
         result = self.service.previsualizar(f)
         assert result.estado == EstadoClasificacion.CONFLICTO
 
@@ -138,7 +138,7 @@ class TestWatcherService:
         f2 = tmp_path / "b.pdf"
         f1.write_text("a")
         f2.write_text("b")
-        self.repo.get_all_rules.return_value = []
+        self.repo.obtener_todas_las_reglas.return_value = []
         results = self.service.previsualizar_todos([tmp_path])
         assert len(results) == 2
 
@@ -148,7 +148,7 @@ class TestWatcherService:
         f1.write_text("a")
         f2.write_text("b")
         cfg = FilterConfig(include_extensions=[".txt"])
-        self.repo.get_all_rules.return_value = []
+        self.repo.obtener_todas_las_reglas.return_value = []
         results = self.service.previsualizar_todos([tmp_path], cfg)
         assert len(results) == 1
         assert results[0].nombre_archivo == "a.txt"
@@ -158,20 +158,20 @@ class TestWatcherService:
         f.write_text("hello")
         rule1 = Regla(nombre="Videos", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".mp4")
         rule2 = Regla(nombre="All", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion="*")
-        self.repo.get_all_rules.return_value = [rule1, rule2]
+        self.repo.obtener_todas_las_reglas.return_value = [rule1, rule2]
         action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino=str(tmp_path))
-        self.repo.get_actions_for_rule.side_effect = lambda rid: [action]
+        self.repo.obtener_acciones_de_regla.side_effect = lambda rid: [action]
         result = self.service._clasificar(f)
         assert result.regla_aplicada is rule1
 
     def test_on_event_skips_directories(self, tmp_path: Path) -> None:
         d = tmp_path / "subdir"
         d.mkdir()
-        self.repo.get_all_rules.return_value = []
+        self.repo.obtener_todas_las_reglas.return_value = []
         callback = MagicMock()
-        self.service.set_result_callback(callback)
+        self.service.establecer_callback_resultado(callback)
         event = EventoArchivo(src_path=d, tipo_evento=TipoEvento.CREADO)
-        self.service._on_event(event)
+        self.service._al_evento(event)
         callback.assert_called_once()
         result = callback.call_args[0][0]
         assert result.estado == EstadoClasificacion.FILTRADO

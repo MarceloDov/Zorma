@@ -62,18 +62,20 @@ _DARK_COLORS = {
     "overlay": "rgba(0, 0, 0, 0.5)",
 }
 
+
+# Paleta de DESING.md (sistema de diseño del proyecto).
 _LIGHT_COLORS = {
-    "bg": "#eff1f5",
-    "bg2": "#e6e9ef",
-    "surface": "#ccd0da",
-    "sidebar": "#dce0e8",
-    "card": "#eff1f5",
-    "card_hover": "#ccd0da",
-    "primary": "#1e66f5",
-    "primary_hover": "#2a7cf6",
-    "primary_pressed": "#1a56d4",
-    "accent": "#8839ef",
-    "accent_hover": "#7287fd",
+    "bg": "#D5FDFF",
+    "bg2": "#FFFFFF",
+    "surface": "#FFFFFF",
+    "sidebar": "#C5FBFF",
+    "card": "#FFFFFF",
+    "card_hover": "#D7FBFF",
+    "primary": "#06B6D4",
+    "primary_hover": "#0BD6F8",
+    "primary_pressed": "#058BA2",
+    "accent": "#004E6F",
+    "accent_hover": "#0079AC",
     "brand": "#fe640b",
     "brand_hover": "#e35f0a",
     "success": "#40a02b",
@@ -82,16 +84,16 @@ _LIGHT_COLORS = {
     "warning_hover": "#c97f1a",
     "error": "#d20f39",
     "error_hover": "#bc0d32",
-    "text": "#4c4f69",
-    "text_muted": "#9ca0b0",
-    "text_bright": "#1e1e2e",
-    "border": "#ccd0da",
-    "border_light": "#bcc0cc",
-    "border_accent": "#acb0be",
-    "scrollbar": "#bcc0cc",
-    "scrollbar_hover": "#acb0be",
-    "glass_bg": "rgba(239, 241, 245, 0.85)",
-    "glass_border": "rgba(30, 102, 245, 0.15)",
+    "text": "#001E36",
+    "text_muted": "#7599A5",
+    "text_bright": "#001E36",
+    "border": "#36EBFF",
+    "border_light": "#7CF2FF",
+    "border_accent": "#1EA4BE",
+    "scrollbar": "#68F0FF",
+    "scrollbar_hover": "#2BCCE2",
+    "glass_bg": "rgba(255, 255, 255, 0.85)",
+    "glass_border": "rgba(6, 182, 212, 0.15)",
     "shadow": "rgba(0, 0, 0, 0.1)",
     "overlay": "rgba(0, 0, 0, 0.2)",
 }
@@ -99,14 +101,14 @@ _LIGHT_COLORS = {
 COLORS = dict(_DARK_COLORS)
 
 
-def set_theme(theme: str) -> None:
+def establecer_tema(theme: str) -> None:
     """Cambia la paleta activa y actualiza COLORS in-place."""
     source = _DARK_COLORS if theme == "dark" else _LIGHT_COLORS
     COLORS.clear()
     COLORS.update(source)
 
 
-def btn_primary() -> str:
+def boton_primario() -> str:
     return f"""
         QPushButton {{
             background-color: {COLORS["primary"]};
@@ -130,7 +132,7 @@ def btn_primary() -> str:
     """
 
 
-def btn_secondary() -> str:
+def boton_secundario() -> str:
     return f"""
         QPushButton {{
             background-color: {COLORS["bg2"]};
@@ -151,7 +153,7 @@ def btn_secondary() -> str:
     """
 
 
-def btn_error() -> str:
+def boton_error() -> str:
     return f"""
         QPushButton {{
             background-color: {COLORS["error"]};
@@ -168,7 +170,7 @@ def btn_error() -> str:
     """
 
 
-def hex_to_rgba(hex_color: str, alpha: float) -> str:
+def hex_a_rgba(hex_color: str, alpha: float) -> str:
     """Convierte un color hex #rrggbb a rgba(r, g, b, alpha).
 
     Args:
@@ -183,13 +185,13 @@ def hex_to_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r}, {g}, {b}, {alpha})"
 
 
-def build_qss() -> str:
+def construir_qss() -> str:
     """Construye la hoja de estilos QSS usando la paleta COLORS activa."""
     return f"""
 QMainWindow, QWidget {{
     background-color: {COLORS["bg"]};
     color: {COLORS["text"]};
-    font-family: "Segoe UI", "SF Pro", "Ubuntu", sans-serif;
+    font-family: "Fira Sans", "Segoe UI", "SF Pro", "Ubuntu", sans-serif;
     font-size: 13px;
 }}
 
@@ -198,8 +200,21 @@ QMainWindow::separator {{
     height: 0;
 }}
 
+/* Headline: DESING.md — Hack Nerd Font */
+QLabel#logo, QLabel#header, QLabel#rules_header, QLabel#history_header,
+QLabel#settings_header, QLabel#disk_header, QLabel#pref_header,
+QLabel#timeline_header, QLabel#preview_header, QLabel#rule_header {{
+    font-family: "Hack Nerd Font", "Cascadia Code", monospace;
+}}
+
+QLabel#logo {{
+    color: {COLORS["text_bright"]};
+    font-size: {FONT_SIZES["xl"]};
+    font-weight: 800;
+}}
+
 QPushButton {{
-    {btn_primary()}
+    {boton_primario()}
 }}
 
 QLineEdit, QComboBox, QSpinBox {{
@@ -621,7 +636,7 @@ QFrame#onboarding {{
 }}
 
 QFrame#conflict_header {{
-    background-color: {hex_to_rgba(COLORS['warning'], 0.1)};
+    background-color: {hex_a_rgba(COLORS['warning'], 0.1)};
     border-radius: {BORDER_RADIUS['md']};
     padding: 4px;
 }}

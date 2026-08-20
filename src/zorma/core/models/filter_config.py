@@ -22,7 +22,7 @@ class FilterConfig:
         if self.exclude_extensions is not None:
             self.exclude_extensions = set(self.exclude_extensions)
 
-    def matches(self, file_path: Path) -> bool:
+    def coincide(self, file_path: Path) -> bool:
         if not self.include_hidden and file_path.name.startswith("."):
             return False
         suffix = file_path.suffix.lower()

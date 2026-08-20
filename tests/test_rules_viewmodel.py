@@ -24,10 +24,10 @@ def vm(repo: MagicMock) -> RulesViewModel:
 class TestRulesViewModel:
     def test_load_rules_emits_rules_changed(self, vm: RulesViewModel, repo: MagicMock):
         rules = [Regla(nombre="Videos", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".mp4")]
-        repo.get_all_rules.return_value = rules
+        repo.obtener_todas_las_reglas.return_value = rules
         emitted = []
         vm.rules_changed.connect(lambda r: emitted.append(r))
-        vm.load_rules()
+        vm.cargar_reglas()
         assert len(emitted) == 1
         assert emitted[0] == rules
 
@@ -35,98 +35,98 @@ class TestRulesViewModel:
         vm = RulesViewModel(None)
         emitted = []
         vm.rules_changed.connect(lambda r: emitted.append(r))
-        vm.load_rules()
+        vm.cargar_reglas()
         assert len(emitted) == 0
 
     def test_find_rule_by_id(self, vm: RulesViewModel, repo: MagicMock):
         rule = Regla(nombre="Test", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
-        repo.get_all_rules.return_value = [rule]
-        vm.load_rules()
-        found = vm.find_rule_by_id(rule.id)
+        repo.obtener_todas_las_reglas.return_value = [rule]
+        vm.cargar_reglas()
+        found = vm.buscar_regla_por_id(rule.id)
         assert found is rule
 
     def test_find_rule_by_id_not_found(self, vm: RulesViewModel, repo: MagicMock):
-        repo.get_all_rules.return_value = []
-        vm.load_rules()
-        assert vm.find_rule_by_id("nonexistent") is None
+        repo.obtener_todas_las_reglas.return_value = []
+        vm.cargar_reglas()
+        assert vm.buscar_regla_por_id("nonexistent") is None
 
     def test_create_rule_saves_and_reloads(self, vm: RulesViewModel, repo: MagicMock):
         rule = Regla(nombre="New", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".mp3")
         action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino="/music")
-        repo.get_all_rules.return_value = [rule]
-        vm.create_rule(rule, action)
-        repo.save_rule.assert_called_once_with(rule)
-        repo.save_action.assert_called_once_with(action)
+        repo.obtener_todas_las_reglas.return_value = [rule]
+        vm.crear_regla(rule, action)
+        repo.guardar_regla.assert_called_once_with(rule)
+        repo.guardar_accion.assert_called_once_with(action)
         assert action.id_regla == rule.id
 
     def test_create_rule_without_action(self, vm: RulesViewModel, repo: MagicMock):
         rule = Regla(nombre="New", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".mp3")
-        repo.get_all_rules.return_value = [rule]
-        vm.create_rule(rule, None)
-        repo.save_rule.assert_called_once()
-        repo.save_action.assert_not_called()
+        repo.obtener_todas_las_reglas.return_value = [rule]
+        vm.crear_regla(rule, None)
+        repo.guardar_regla.assert_called_once()
+        repo.guardar_accion.assert_not_called()
 
     def test_update_rule_saves(self, vm: RulesViewModel, repo: MagicMock):
         rule = Regla(nombre="Old", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
         action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino="/docs")
-        repo.get_all_rules.return_value = [rule]
-        vm.update_rule(rule, action)
-        repo.save_rule.assert_called_once_with(rule)
-        repo.save_action.assert_called_once()
+        repo.obtener_todas_las_reglas.return_value = [rule]
+        vm.actualizar_regla(rule, action)
+        repo.guardar_regla.assert_called_once_with(rule)
+        repo.guardar_accion.assert_called_once()
 
     def test_delete_rule_deletes_and_reloads(self, vm: RulesViewModel, repo: MagicMock):
         rule = Regla(nombre="DeleteMe", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".zip")
-        repo.get_all_rules.return_value = [rule]
-        vm.load_rules()
-        repo.get_all_rules.return_value = []
-        vm.delete_rule(rule.id, rule.nombre)
-        repo.delete_rule.assert_called_once_with(rule.id)
+        repo.obtener_todas_las_reglas.return_value = [rule]
+        vm.cargar_reglas()
+        repo.obtener_todas_las_reglas.return_value = []
+        vm.eliminar_regla(rule.id, rule.nombre)
+        repo.eliminar_regla.assert_called_once_with(rule.id)
 
     def test_reorder_rules_saves_priorities(self, vm: RulesViewModel, repo: MagicMock):
         r1 = Regla(nombre="A", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt", prioridad=0)
         r2 = Regla(nombre="B", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".pdf", prioridad=10)
-        repo.get_all_rules.return_value = [r1, r2]
-        vm.load_rules()
-        vm.reorder_rules([(r2.id, 0), (r1.id, 1)])
+        repo.obtener_todas_las_reglas.return_value = [r1, r2]
+        vm.cargar_reglas()
+        vm.reordenar_reglas([(r2.id, 0), (r1.id, 1)])
         assert r2.prioridad == 0
         assert r1.prioridad == 10
-        assert repo.save_rule.call_count >= 2
+        assert repo.guardar_regla.call_count >= 2
 
     def test_get_actions_for_rule(self, vm: RulesViewModel, repo: MagicMock):
         rule = Regla(nombre="Test", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
         action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino="/dest")
-        repo.get_actions_for_rule.return_value = [action]
-        result = vm.get_actions_for_rule(rule.id)
+        repo.obtener_acciones_de_regla.return_value = [action]
+        result = vm.obtener_acciones_de_regla(rule.id)
         assert result == [action]
-        repo.get_actions_for_rule.assert_called_once_with(rule.id)
+        repo.obtener_acciones_de_regla.assert_called_once_with(rule.id)
 
     def test_toast_emitted_on_create(self, vm: RulesViewModel, repo: MagicMock):
         rule = Regla(nombre="New", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
-        repo.get_all_rules.return_value = [rule]
+        repo.obtener_todas_las_reglas.return_value = [rule]
         emitted = []
         vm.toast_requested.connect(lambda msg, color: emitted.append(msg))
-        vm.create_rule(rule, None)
+        vm.crear_regla(rule, None)
         assert len(emitted) == 1
         assert "creada" in emitted[0]
 
     def test_toast_emitted_on_delete(self, vm: RulesViewModel, repo: MagicMock):
         rule = Regla(nombre="Del", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
-        repo.get_all_rules.return_value = []
+        repo.obtener_todas_las_reglas.return_value = []
         emitted = []
         vm.toast_requested.connect(lambda msg, color: emitted.append(msg))
-        vm.delete_rule(rule.id, rule.nombre)
+        vm.eliminar_regla(rule.id, rule.nombre)
         assert len(emitted) == 1
         assert "eliminada" in emitted[0]
 
     def test_set_repository_loads_rules(self, vm: RulesViewModel, repo: MagicMock):
         rules = [Regla(nombre="A", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")]
-        repo.get_all_rules.return_value = rules
+        repo.obtener_todas_las_reglas.return_value = rules
         emitted = []
         vm.rules_changed.connect(lambda r: emitted.append(r))
-        vm.set_repository(repo)
+        vm.establecer_repositorio(repo)
         assert len(emitted) == 1
         assert emitted[0] == rules
 
     def test_reorder_noop_without_repo(self):
         vm = RulesViewModel(None)
-        vm.reorder_rules([("id", 0)])
+        vm.reordenar_reglas([("id", 0)])

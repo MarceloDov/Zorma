@@ -23,9 +23,9 @@ class TestSidebarButton:
     def test_toggle_active(self, qtbot):
         btn = SidebarButton("Reglas")
         qtbot.addWidget(btn)
-        btn.set_active(True)
+        btn.establecer_activo(True)
         assert btn.isChecked()
-        btn.set_active(False)
+        btn.establecer_activo(False)
         assert not btn.isChecked()
 
     def test_accepts_icon_path(self, qtbot):
@@ -51,7 +51,7 @@ class TestCard:
     def test_update_value(self, qtbot):
         card = Card("Errores", "0", COLORS["error"])
         qtbot.addWidget(card)
-        card.update_value("5")
+        card.actualizar_valor("5")
         # After update we can check accessible description
         assert card.accessibleDescription() == "Value: 0"
 
@@ -73,7 +73,7 @@ class TestEmptyState:
         es = EmptyState(icon="📝", title="Test", description="Descripción", button_text="Click")
         qtbot.addWidget(es)
         callback = MagicMock()
-        es.set_button_callback(callback)
+        es.establecer_callback_boton(callback)
         btn = es.findChild(QPushButton)
         assert btn is not None
         qtbot.mouseClick(btn, Qt.MouseButton.LeftButton)
@@ -122,7 +122,7 @@ class TestTimelineRow:
     def test_renders_file_name(self, qtbot, sample_result):
         row = TimelineRow(sample_result)
         qtbot.addWidget(row)
-        assert row.result().nombre_archivo == "test.txt"
+        assert row.resultado().nombre_archivo == "test.txt"
 
     def test_no_undo_button_when_not_allowed(self, qtbot, sample_result):
         row = TimelineRow(sample_result, can_undo=False)
@@ -164,10 +164,10 @@ class TestTimelineFeed:
             ruta_origen=Path("/tmp/doc.pdf"),
             estado=EstadoClasificacion.EXITO,
         )
-        feed.add_result(result)
+        feed.agregar_resultado(result)
         rows = feed.findChildren(TimelineRow)
         assert len(rows) == 1
-        assert rows[0].result().nombre_archivo == "doc.pdf"
+        assert rows[0].resultado().nombre_archivo == "doc.pdf"
 
     def test_clear_removes_rows(self, qtbot):
         feed = TimelineFeed()
@@ -177,7 +177,7 @@ class TestTimelineFeed:
             ruta_origen=Path("/tmp/doc.pdf"),
             estado=EstadoClasificacion.EXITO,
         )
-        feed.add_result(result)
-        feed.clear()
+        feed.agregar_resultado(result)
+        feed.limpiar()
         rows = feed.findChildren(TimelineRow)
         assert len(rows) == 0

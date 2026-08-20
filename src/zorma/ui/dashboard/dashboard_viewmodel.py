@@ -29,7 +29,7 @@ class ScanWorker(QThread):
         self._paths = paths
         self._cancelled = False
 
-    def cancel(self) -> None:
+    def cancelar(self) -> None:
         self._cancelled = True
 
     def run(self) -> None:
@@ -55,7 +55,7 @@ class ClassifyWorker(QThread):
         self._results = results
         self._cancelled = False
 
-    def cancel(self) -> None:
+    def cancelar(self) -> None:
         self._cancelled = True
 
     def run(self) -> None:
@@ -112,11 +112,11 @@ class DashboardViewModel(QObject):
         self._auto_classify = False
         self._scan_worker: ScanWorker | None = None
         self._classify_worker: ClassifyWorker | None = None
-        self._load_settings()
+        self._cargar_configuracion()
 
     # --- Settings ---
 
-    def _load_settings(self) -> None:
+    def _cargar_configuracion(self) -> None:
         config_file = self._data_dir / "app_config.json"
         if not config_file.exists():
             return
@@ -129,11 +129,11 @@ class DashboardViewModel(QObject):
                     self._watch_path = p
                     self.watch_path_changed.emit(p)
                     self._auto_classify = config.get("auto_classify", False)
-            self._emit_ui_state()
+            self._emitir_estado_ui()
         except (OSError, json.JSONDecodeError):
             pass
 
-    def _save_settings(self) -> None:
+    def _guardar_configuracion(self) -> None:
         config_file = self._data_dir / "app_config.json"
         try:
             config: dict[str, Any] = {}
@@ -148,28 +148,28 @@ class DashboardViewModel(QObject):
 
     # --- Watch path ---
 
-    def set_watch_path(self, path: Path | None) -> None:
+    def establecer_ruta_vigilancia(self, path: Path | None) -> None:
         self._watch_path = path
         self.watch_path_changed.emit(path)
-        self._emit_ui_state()
-        self._save_settings()
+        self._emitir_estado_ui()
+        self._guardar_configuracion()
 
-    def get_watch_path(self) -> Path | None:
+    def obtener_ruta_vigilancia(self) -> Path | None:
         return self._watch_path
 
-    def get_auto_classify(self) -> bool:
+    def obtener_auto_clasificar(self) -> bool:
         return self._auto_classify
 
     # --- Classification ---
 
-    def set_watcher_service(self, service: ServicioClasificacion) -> None:
+    def establecer_servicio_vigilancia(self, service: ServicioClasificacion) -> None:
         self._watcher_service = service
-        self._load_history()
+        self._cargar_historial()
 
-    def get_watcher_service(self) -> ServicioClasificacion | None:
+    def obtener_servicio_vigilancia(self) -> ServicioClasificacion | None:
         return self._watcher_service
 
-    def run_scan(self) -> None:
+    def ejecutar_escaneo(self) -> None:
         if self._watcher_service is None or self._watch_path is None:
             return
         self._classifying = True
@@ -178,10 +178,10 @@ class DashboardViewModel(QObject):
         self.progress_changed.emit(0, 0)
 
         self._scan_worker = ScanWorker(self._watcher_service, [self._watch_path])
-        self._scan_worker.scan_finished.connect(self._on_scan_finished)
+        self._scan_worker.scan_finished.connect(self._al_finalizar_escaneo)
         self._scan_worker.start()
 
-    def _on_scan_finished(self, results: list[ResultadoClasificacion]) -> None:
+    def _al_finalizar_escaneo(self, results: list[ResultadoClasificacion]) -> None:
         self._classifying = False
         self.classifying_changed.emit(False)
 
@@ -197,7 +197,7 @@ class DashboardViewModel(QObject):
 
     scan_finished_for_preview = pyqtSignal(list)
 
-    def start_classify(self, results: list[ResultadoClasificacion]) -> None:
+    def iniciar_clasificacion(self, results: list[ResultadoClasificacion]) -> None:
         if self._watcher_service is None:
             return
         self._classifying = True
@@ -206,34 +206,34 @@ class DashboardViewModel(QObject):
         self.progress_changed.emit(0, 100)
 
         self._classify_worker = ClassifyWorker(self._watcher_service, results)
-        self._classify_worker.progress.connect(self._on_classify_progress)
-        self._classify_worker.file_done.connect(self._on_classify_file_done)
-        self._classify_worker.classify_finished.connect(self._on_classify_finished)
+        self._classify_worker.progress.connect(self._al_progreso_clasificacion)
+        self._classify_worker.file_done.connect(self._al_archivo_clasificado)
+        self._classify_worker.classify_finished.connect(self._al_finalizar_clasificacion)
         self._classify_worker.start()
 
-    def _on_classify_progress(self, current: int, total: int) -> None:
+    def _al_progreso_clasificacion(self, current: int, total: int) -> None:
         self.progress_changed.emit(current, total)
         self.status_text.emit(f"Clasificando {current} de {total}", COLORS["primary"])
 
-    def _on_classify_file_done(self, result: object) -> None:
+    def _al_archivo_clasificado(self, result: object) -> None:
         if isinstance(result, ResultadoClasificacion):
-            self._add_result(result)
+            self._agregar_resultado(result)
 
-    def _on_classify_finished(self, success_count: int, error_count: int) -> None:
+    def _al_finalizar_clasificacion(self, success_count: int, error_count: int) -> None:
         self._classifying = False
         self.classifying_changed.emit(False)
         self._classify_worker = None
         self.status_text.emit("", "")
         self.progress_changed.emit(0, 100)
-        self._emit_ui_state()
+        self._emitir_estado_ui()
         self.show_toast.emit(
             f"✓ {success_count} clasificados, {error_count} errores",
             COLORS["success"] if error_count == 0 else COLORS["warning"],
         )
 
-    def cancel_operation(self) -> None:
+    def cancelar_operacion(self) -> None:
         if self._classify_worker is not None and self._classify_worker.isRunning():
-            self._classify_worker.cancel()
+            self._classify_worker.cancelar()
             self._classify_worker.wait(3000)
             self._classify_worker = None
             self._classifying = False
@@ -244,7 +244,7 @@ class DashboardViewModel(QObject):
             return
 
         if self._scan_worker is not None and self._scan_worker.isRunning():
-            self._scan_worker.cancel()
+            self._scan_worker.cancelar()
             self._scan_worker.wait(3000)
             self._scan_worker = None
             self._classifying = False
@@ -256,116 +256,116 @@ class DashboardViewModel(QObject):
 
     # --- Watcher ---
 
-    def start_watcher(self) -> None:
+    def iniciar_vigilancia(self) -> None:
         if self._watcher_service is None or self._watch_path is None:
             return
-        self._watcher_service.set_result_callback(self._on_result)
-        self._watcher_service.start_monitoring([self._watch_path])
+        self._watcher_service.establecer_callback_resultado(self._al_resultado)
+        self._watcher_service.iniciar_monitoreo([self._watch_path])
         self._watcher_running = True
         self.watcher_status.emit("● Monitor activo", COLORS["success"])
 
-    def stop_watcher(self) -> None:
+    def detener_vigilancia(self) -> None:
         if self._watcher_service is None:
             return
-        self._watcher_service.stop_monitoring()
+        self._watcher_service.detener_monitoreo()
         self._watcher_running = False
         self.watcher_status.emit("● Monitor detenido", COLORS["error"])
 
-    def set_auto_classify(self, enabled: bool) -> None:
+    def establecer_auto_clasificar(self, enabled: bool) -> None:
         self._auto_classify = enabled
         if enabled:
-            self.start_watcher()
+            self.iniciar_vigilancia()
         else:
-            self.stop_watcher()
-        self._emit_ui_state()
-        self._save_settings()
+            self.detener_vigilancia()
+        self._emitir_estado_ui()
+        self._guardar_configuracion()
 
     # --- History ---
 
-    def _load_history(self) -> None:
+    def _cargar_historial(self) -> None:
         if self._watcher_service is None:
             return
-        results = self._watcher_service.get_history()
+        results = self._watcher_service.obtener_historial()
         self._total_classified = 0
         self._total_errors = 0
         for result in results:
-            self._add_result(result)
+            self._agregar_resultado(result)
 
-    def _add_result(self, result: ResultadoClasificacion) -> None:
+    def _agregar_resultado(self, result: ResultadoClasificacion) -> None:
         if result.estado == EstadoClasificacion.EXITO:
             self._total_classified += 1
         elif result.estado == EstadoClasificacion.ERROR:
             self._total_errors += 1
         self.counters_changed.emit(self._total_classified, self._total_errors)
         self.result_added.emit(result)
-        self._emit_ui_state()
+        self._emitir_estado_ui()
 
-    def _on_result(self, result: ResultadoClasificacion) -> None:
+    def _al_resultado(self, result: ResultadoClasificacion) -> None:
         from PyQt6.QtCore import QTimer
-        QTimer.singleShot(0, lambda: self._add_result(result))
+        QTimer.singleShot(0, lambda: self._agregar_resultado(result))
 
     # --- Undo / Redo ---
 
-    def can_undo(self) -> bool:
-        return self._gestor_deshacer is not None and self._gestor_deshacer.can_undo()
+    def puede_deshacer(self) -> bool:
+        return self._gestor_deshacer is not None and self._gestor_deshacer.puede_deshacer()
 
-    def can_redo(self) -> bool:
-        return self._gestor_deshacer is not None and self._gestor_deshacer.can_redo()
+    def puede_rehacer(self) -> bool:
+        return self._gestor_deshacer is not None and self._gestor_deshacer.puede_rehacer()
 
-    def get_undoable_count(self) -> int:
+    def obtener_cantidad_deshacibles(self) -> int:
         if self._gestor_deshacer is None:
             return 0
-        return len([e for e in self._gestor_deshacer.get_undoable() if not e.revertido])
+        return len([e for e in self._gestor_deshacer.obtener_pila_deshacer() if not e.revertido])
 
-    def undo_file(self, result: ResultadoClasificacion) -> None:
+    def deshacer_archivo(self, result: ResultadoClasificacion) -> None:
         if self._gestor_deshacer is None or result.ruta_origen is None:
             return
-        undone = self._gestor_deshacer.undo_by_source_path(result.ruta_origen)
+        undone = self._gestor_deshacer.deshacer_por_ruta_origen(result.ruta_origen)
         if undone is not None and undone.estado == EstadoClasificacion.EXITO:
             self._total_classified = max(0, self._total_classified - 1)
             self.counters_changed.emit(self._total_classified, self._total_errors)
-            self._emit_ui_state()
+            self._emitir_estado_ui()
 
-    def undo_all(self) -> int:
+    def deshacer_todo(self) -> int:
         if self._gestor_deshacer is None:
             return 0
         undone_count = 0
-        while self._gestor_deshacer.can_undo():
-            result = self._gestor_deshacer.undo()
+        while self._gestor_deshacer.puede_deshacer():
+            result = self._gestor_deshacer.deshacer()
             if result is not None and result.estado == EstadoClasificacion.EXITO:
                 self._total_classified = max(0, self._total_classified - 1)
                 undone_count += 1
         self.counters_changed.emit(self._total_classified, self._total_errors)
-        self._emit_ui_state()
+        self._emitir_estado_ui()
         return undone_count
 
-    def redo_all(self) -> int:
+    def rehacer_todo(self) -> int:
         if self._gestor_deshacer is None:
             return 0
         redone_count = 0
-        while self._gestor_deshacer.can_redo():
-            result = self._gestor_deshacer.redo()
+        while self._gestor_deshacer.puede_rehacer():
+            result = self._gestor_deshacer.rehacer()
             if result is not None and result.estado == EstadoClasificacion.EXITO:
                 self._total_classified += 1
                 redone_count += 1
         self.counters_changed.emit(self._total_classified, self._total_errors)
-        self._emit_ui_state()
+        self._emitir_estado_ui()
         return redone_count
 
     # --- UI state helpers ---
 
-    def _emit_ui_state(self) -> None:
+    def _emitir_estado_ui(self) -> None:
         show_onboarding = self._total_classified == 0 and self._watch_path is None
         self.onboarding_changed.emit(show_onboarding)
-        can_undo = self.can_undo()
-        can_redo = self.can_redo()
+        can_undo = self.puede_deshacer()
+        can_redo = self.puede_rehacer()
         self.undo_redo_changed.emit(can_undo, can_redo)
 
-    def get_rules_count(self) -> str:
+    def obtener_cantidad_reglas(self) -> str:
         if self._repo is None:
             return "0"
-        return str(len(self._repo.get_all_rules()))
+        return str(len(self._repo.obtener_todas_las_reglas()))
 
     @property
-    def is_classifying(self) -> bool:
+    def esta_clasificando(self) -> bool:
         return self._classifying

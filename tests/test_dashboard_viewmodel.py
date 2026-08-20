@@ -39,32 +39,32 @@ def vm(data_dir: Path, repo: MagicMock) -> DashboardViewModel:
 
 class TestDashboardViewModel:
     def test_init_creates_no_signals(self, vm: DashboardViewModel):
-        assert vm.get_watch_path() is None
-        assert not vm.is_classifying
+        assert vm.obtener_ruta_vigilancia() is None
+        assert not vm.esta_clasificando
 
     def test_set_watch_path_emits_signal(self, vm: DashboardViewModel):
         p = Path("/tmp/test")
         emitted = []
         vm.watch_path_changed.connect(lambda x: emitted.append(x))
-        vm.set_watch_path(p)
+        vm.establecer_ruta_vigilancia(p)
         assert len(emitted) == 1
         assert emitted[0] == p
 
     def test_set_watch_path_none(self, vm: DashboardViewModel):
-        vm.set_watch_path(None)
-        assert vm.get_watch_path() is None
+        vm.establecer_ruta_vigilancia(None)
+        assert vm.obtener_ruta_vigilancia() is None
 
     def test_get_rules_count(self, vm: DashboardViewModel, repo: MagicMock):
-        repo.get_all_rules.return_value = [MagicMock(), MagicMock()]
-        assert vm.get_rules_count() == "2"
+        repo.obtener_todas_las_reglas.return_value = [MagicMock(), MagicMock()]
+        assert vm.obtener_cantidad_reglas() == "2"
 
     def test_get_rules_count_zero(self, vm: DashboardViewModel, repo: MagicMock):
-        repo.get_all_rules.return_value = []
-        assert vm.get_rules_count() == "0"
+        repo.obtener_todas_las_reglas.return_value = []
+        assert vm.obtener_cantidad_reglas() == "0"
 
     def test_get_rules_count_no_repo(self):
         vm = DashboardViewModel(Path("/tmp"))
-        assert vm.get_rules_count() == "0"
+        assert vm.obtener_cantidad_reglas() == "0"
 
     def test_watch_path_persisted(self, data_dir: Path, repo: MagicMock):
         watch_dir = data_dir / "watch"
@@ -72,20 +72,20 @@ class TestDashboardViewModel:
         config_file = data_dir / "app_config.json"
         config_file.write_text(json.dumps({"watch_path": str(watch_dir), "auto_classify": True}))
         vm = DashboardViewModel(data_dir, repo)
-        assert vm.get_watch_path() == watch_dir
-        assert vm.get_auto_classify()
+        assert vm.obtener_ruta_vigilancia() == watch_dir
+        assert vm.obtener_auto_clasificar()
 
     def test_persist_watch_path(self, data_dir: Path, repo: MagicMock):
         saved_dir = data_dir / "saved"
         vm = DashboardViewModel(data_dir, repo)
-        vm.set_watch_path(saved_dir)
+        vm.establecer_ruta_vigilancia(saved_dir)
         config_file = data_dir / "app_config.json"
         assert config_file.exists()
         config = json.loads(config_file.read_text(encoding="utf-8"))
         assert config["watch_path"] == str(saved_dir)
 
     def test_auto_classify_default_false(self, vm: DashboardViewModel):
-        assert not vm.get_auto_classify()
+        assert not vm.obtener_auto_clasificar()
 
     def test_counters_start_at_zero(self, vm: DashboardViewModel):
         emitted = []
@@ -93,13 +93,13 @@ class TestDashboardViewModel:
         assert len(emitted) == 0
 
     def test_undo_redo_state_no_manager(self, vm: DashboardViewModel):
-        assert not vm.can_undo()
-        assert not vm.can_redo()
-        assert vm.get_undoable_count() == 0
+        assert not vm.puede_deshacer()
+        assert not vm.puede_rehacer()
+        assert vm.obtener_cantidad_deshacibles() == 0
 
     def test_onboarding_signal_after_path_change(self, data_dir: Path, repo: MagicMock):
         vm = DashboardViewModel(data_dir, repo)
         emitted = []
         vm.onboarding_changed.connect(lambda x: emitted.append(x))
-        vm.set_watch_path(data_dir / "watch")
+        vm.establecer_ruta_vigilancia(data_dir / "watch")
         assert len(emitted) == 1

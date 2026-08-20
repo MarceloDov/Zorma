@@ -35,12 +35,12 @@ class DebounceCallback:
             old = self._timers.pop(event.src_path, None)
             if old is not None:
                 old.cancel()
-            timer = threading.Timer(self._delay, self._fire, args=[event.src_path])
+            timer = threading.Timer(self._delay, self._disparar, args=[event.src_path])
             timer.daemon = True
             self._timers[event.src_path] = timer
             timer.start()
 
-    def _fire(self, src_path: Path) -> None:
+    def _disparar(self, src_path: Path) -> None:
         with self._lock:
             self._timers.pop(src_path, None)
             event = self._events.pop(src_path, None)
@@ -50,7 +50,7 @@ class DebounceCallback:
             except Exception:
                 logger.exception("Error en callback debounceado para %s", src_path)
 
-    def flush_all(self) -> None:
+    def vaciar_todo(self) -> None:
         with self._lock:
             timers = dict(self._timers)
             events = dict(self._events)
@@ -77,23 +77,23 @@ class ZormaEventHandler(PatternMatchingEventHandler):
         self.filter_config = filter_config
 
     def on_created(self, event: FileSystemEvent) -> None:
-        self._dispatch(event, TipoEvento.CREADO)
+        self._despachar(event, TipoEvento.CREADO)
 
     def on_modified(self, event: FileSystemEvent) -> None:
-        self._dispatch(event, TipoEvento.MODIFICADO)
+        self._despachar(event, TipoEvento.MODIFICADO)
 
     def on_moved(self, event: FileSystemEvent) -> None:
-        self._dispatch(event, TipoEvento.MOVIDO)
+        self._despachar(event, TipoEvento.MOVIDO)
 
     def on_deleted(self, event: FileSystemEvent) -> None:
-        self._dispatch(event, TipoEvento.ELIMINADO)
+        self._despachar(event, TipoEvento.ELIMINADO)
 
-    def _dispatch(self, event: FileSystemEvent, event_type: TipoEvento) -> None:
+    def _despachar(self, event: FileSystemEvent, event_type: TipoEvento) -> None:
         if event.is_directory:
             return
         src = Path(str(event.src_path))
 
-        if self.filter_config and not self.filter_config.matches(src):
+        if self.filter_config and not self.filter_config.coincide(src):
             return
         dest: Path | None = None
         if event_type == TipoEvento.MOVIDO and hasattr(event, "dest_path"):
@@ -112,11 +112,11 @@ class WatchdogFileWatcher:
         self._filter_config: FilterConfig | None = None
         self._debounced: DebounceCallback | None = None
 
-    def start(
+    def iniciar(
         self, paths: list[Path], callback: Callable[[EventoArchivo], None], excluded_patterns: list[str] | None = None
     ) -> None:
         if self._observer is not None:
-            self.stop()
+            self.detener()
 
         self._observer = Observer()
         self._handlers = []
@@ -131,19 +131,19 @@ class WatchdogFileWatcher:
                 logger.info("Watching directory: %s", resolved)
         self._observer.start()
 
-    def stop(self) -> None:
+    def detener(self) -> None:
         if self._debounced is not None:
-            self._debounced.flush_all()
+            self._debounced.vaciar_todo()
             self._debounced = None
         if self._observer is not None:
             self._observer.stop()
             self._observer.join(timeout=5)
             self._observer = None
 
-    def is_alive(self) -> bool:
+    def esta_activo(self) -> bool:
         return self._observer is not None and self._observer.is_alive()
 
-    def update_filter(self, filter_config: FilterConfig | None) -> None:
+    def actualizar_filtro(self, filter_config: FilterConfig | None) -> None:
         self._filter_config = filter_config
         for handler in self._handlers:
             handler.filter_config = filter_config
