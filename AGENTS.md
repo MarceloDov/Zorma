@@ -93,6 +93,8 @@ Si alguno falla, el PR no debe mergearse. No hay umbral de cobertura ni linter d
 ## 9. Commits y PR
 Conventional Commits (`feat:`, `fix:`, `test:`, `refactor:`) con descripción en español, ej. `feat: agregar animación de navegación`. Rama: `feature/descripcion-corta` o `fix/descripcion-corta`. PR explica qué cambia y por qué.
 
+Nunca agregar trailers de autoría de agente/IA al mensaje de commit (líneas tipo `Co-Authored-By: <agente>`, `<Agente>-Session: <url>`, o equivalentes de cualquier herramienta, no solo una en particular) salvo que el usuario lo pida explícitamente para ese commit puntual. Por defecto, mensaje de commit limpio, sin coautor de agente, sin importar cuál se esté usando.
+
 ## 10. Límites del agente (nunca tocar sin aprobación explícita)
 - `.github/workflows/ci.yml`.
 - Borrar o sobreescribir `~/.zorma/zorma.json` de un usuario real.
