@@ -1,13 +1,14 @@
 from pathlib import Path
 
-from zorma.core.ports.file_watcher import FilterConfig
+from zorma.core.models.configuracion_filtro import ConfiguracionFiltro
 
 
 class TestFilterConfig:
     """
-    Clase de pruebas para `FilterConfig`.
+    Clase de pruebas para `ConfiguracionFiltro`.
     Verifica que las reglas de filtrado de archivos (extensiones, tamaños, archivos ocultos, directorios excluidos) se apliquen correctamente para determinar si un archivo debe ser procesado.
     """
+
     def test_no_filter_passes(self, tmp_path: Path) -> None:
         """
         Prueba que un archivo pase el filtro cuando no se aplican reglas de filtrado.
@@ -15,8 +16,8 @@ class TestFilterConfig:
         """
         f = tmp_path / "test.txt"
         f.write_text("hello")
-        cfg = FilterConfig()
-        assert cfg.matches(f) is True
+        cfg = ConfiguracionFiltro()
+        assert cfg.coincide(f) is True
 
     def test_include_extensions_pass(self, tmp_path: Path) -> None:
         """
@@ -25,8 +26,8 @@ class TestFilterConfig:
         """
         f = tmp_path / "test.txt"
         f.write_text("hello")
-        cfg = FilterConfig(include_extensions=[".txt"])
-        assert cfg.matches(f) is True
+        cfg = ConfiguracionFiltro(include_extensions=[".txt"])
+        assert cfg.coincide(f) is True
 
     def test_include_extensions_fail(self, tmp_path: Path) -> None:
         """
@@ -35,8 +36,8 @@ class TestFilterConfig:
         """
         f = tmp_path / "test.pdf"
         f.write_text("hello")
-        cfg = FilterConfig(include_extensions=[".txt"])
-        assert cfg.matches(f) is False
+        cfg = ConfiguracionFiltro(include_extensions=[".txt"])
+        assert cfg.coincide(f) is False
 
     def test_exclude_extensions(self, tmp_path: Path) -> None:
         """
@@ -45,8 +46,8 @@ class TestFilterConfig:
         """
         f = tmp_path / "test.txt"
         f.write_text("hello")
-        cfg = FilterConfig(exclude_extensions=[".txt"])
-        assert cfg.matches(f) is False
+        cfg = ConfiguracionFiltro(exclude_extensions=[".txt"])
+        assert cfg.coincide(f) is False
 
     def test_exclude_not_matching(self, tmp_path: Path) -> None:
         """
@@ -55,8 +56,8 @@ class TestFilterConfig:
         """
         f = tmp_path / "test.pdf"
         f.write_text("hello")
-        cfg = FilterConfig(exclude_extensions=[".txt"])
-        assert cfg.matches(f) is True
+        cfg = ConfiguracionFiltro(exclude_extensions=[".txt"])
+        assert cfg.coincide(f) is True
 
     def test_hidden_file_excluded_by_default(self, tmp_path: Path) -> None:
         """
@@ -65,8 +66,8 @@ class TestFilterConfig:
         """
         f = tmp_path / ".hidden.txt"
         f.write_text("hello")
-        cfg = FilterConfig()
-        assert cfg.matches(f) is False
+        cfg = ConfiguracionFiltro()
+        assert cfg.coincide(f) is False
 
     def test_hidden_file_included(self, tmp_path: Path) -> None:
         """
@@ -75,8 +76,8 @@ class TestFilterConfig:
         """
         f = tmp_path / ".hidden.txt"
         f.write_text("hello")
-        cfg = FilterConfig(include_hidden=True)
-        assert cfg.matches(f) is True
+        cfg = ConfiguracionFiltro(include_hidden=True)
+        assert cfg.coincide(f) is True
 
     def test_max_size(self, tmp_path: Path) -> None:
         """
@@ -85,8 +86,8 @@ class TestFilterConfig:
         """
         f = tmp_path / "large.txt"
         f.write_text("x" * 1000)
-        cfg = FilterConfig(max_size=500)
-        assert cfg.matches(f) is False
+        cfg = ConfiguracionFiltro(max_size=500)
+        assert cfg.coincide(f) is False
 
     def test_min_size(self, tmp_path: Path) -> None:
         """
@@ -95,8 +96,8 @@ class TestFilterConfig:
         """
         f = tmp_path / "small.txt"
         f.write_text("hi")
-        cfg = FilterConfig(min_size=100)
-        assert cfg.matches(f) is False
+        cfg = ConfiguracionFiltro(min_size=100)
+        assert cfg.coincide(f) is False
 
     def test_size_in_range(self, tmp_path: Path) -> None:
         """
@@ -105,8 +106,8 @@ class TestFilterConfig:
         """
         f = tmp_path / "medium.txt"
         f.write_text("x" * 200)
-        cfg = FilterConfig(min_size=100, max_size=500)
-        assert cfg.matches(f) is True
+        cfg = ConfiguracionFiltro(min_size=100, max_size=500)
+        assert cfg.coincide(f) is True
 
     def test_exclude_dirs(self, tmp_path: Path) -> None:
         """
@@ -117,5 +118,5 @@ class TestFilterConfig:
         d.mkdir()
         f = d / "test.txt"
         f.write_text("hello")
-        cfg = FilterConfig(exclude_dirs=["node_modules"])
-        assert cfg.matches(f) is False
+        cfg = ConfiguracionFiltro(exclude_dirs=["node_modules"])
+        assert cfg.coincide(f) is False

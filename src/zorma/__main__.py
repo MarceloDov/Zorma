@@ -5,16 +5,13 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from .adapters.persistence.json_rule_repository import JsonRuleRepository
-from .adapters.persistence.json_undo_stack import JsonUndoStack
-from .adapters.watcher.watchdog_watcher import WatchdogFileWatcher
-from .config.settings import APP_NAME, DATA_DIR, UNDO_FILE, UNDO_STACK_LIMIT
-from .core.services.action_executor import ActionExecutor
-from .core.services.rule_evaluator import RuleEvaluator
-from .core.services.undo_manager import UndoManager
-from .core.services.watcher_service import WatcherService
-from .ui.main_window import MainWindow
-from .ui.shared.styles import DARK_THEME
+from .adapters.persistence.zorma_repository import ZormaRepository
+from .adapters.watcher.vigilante_watchdog import VigilanteArchivosWatchdog
+from .config.settings import APP_NAME, DATA_DIR, UNDO_STACK_LIMIT
+from .core.services.gestor_deshacer import GestorDeshacer
+from .core.services.servicio_clasificacion import ServicioClasificacion
+from .ui.shared.styles import construir_qss
+from .ui.ventana_principal import VentanaPrincipal
 
 
 def main() -> None:
@@ -24,32 +21,26 @@ def main() -> None:
     )
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
-    app.setStyleSheet(DARK_THEME)
+    app.setStyleSheet(construir_qss())
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    repo = JsonRuleRepository(DATA_DIR)
-    if not repo.get_groups():
-        repo.create_default_rules()
+    repo = ZormaRepository(DATA_DIR, undo_limit=UNDO_STACK_LIMIT)
+    if not repo.obtener_grupos():
+        repo.crear_reglas_predeterminadas()
 
-    executor = ActionExecutor()
-    undo_stack = JsonUndoStack(UNDO_FILE, UNDO_STACK_LIMIT)
-    undo_manager = UndoManager(undo_stack, executor)
+    gestor_deshacer = GestorDeshacer(repo)
 
-    watcher_service = WatcherService(
-        watcher=WatchdogFileWatcher(),
+    watcher_service = ServicioClasificacion(
+        watcher=VigilanteArchivosWatchdog(),
         repo=repo,
-        evaluator=RuleEvaluator(),
-        executor=executor,
-        data_dir=DATA_DIR,
     )
-    watcher_service.set_undo_manager(undo_manager)
 
-    window = MainWindow(
+    window = VentanaPrincipal(
         data_dir=DATA_DIR,
         watcher_service=watcher_service,
         rule_repository=repo,
-        undo_manager=undo_manager,
+        gestor_deshacer=gestor_deshacer,
     )
     window.show()
 
