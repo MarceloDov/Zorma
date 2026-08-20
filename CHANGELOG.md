@@ -7,6 +7,8 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-20
+
 ### Added
 - Primer commit del proyecto: clasificador automático de archivos de escritorio.
 - Mejoras en el manejo de eventos y filtros del sistema de vigilancia de archivos.
