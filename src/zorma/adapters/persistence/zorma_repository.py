@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from ...core.models.accion_regla import AccionRegla
-from ...core.models.enums import EstadoClasificacion, TipoAccion, TipoCondicion, TipoOperacion
+from ...core.models.enums import EstadoClasificacion, TipoAccion, TipoCondicion
 from ...core.models.grupo_regla import GrupoRegla
 from ...core.models.pila_deshacer import PilaDeshacer
 from ...core.models.regla import Regla
@@ -368,19 +368,15 @@ class ZormaRepository:
             "action_type": entry.tipo_operacion.value,
             "timestamp": entry.marca_tiempo.isoformat(),
             "reverted": entry.revertido,
-            "record_id": entry.id_registro or "",
-            "serialized_state": entry.estado_serializado or {},
         }
 
     @staticmethod
     def _deserialize_undo(d: dict[str, Any]) -> PilaDeshacer:
         entry = PilaDeshacer(
             id=d["id"],
-            tipo_operacion=TipoOperacion(d.get("action_type", TipoOperacion.MOVER.value)),
+            tipo_operacion=TipoAccion(d.get("action_type", TipoAccion.MOVER.value)),
             marca_tiempo=datetime.fromisoformat(d["timestamp"]) if "timestamp" in d else datetime.now(UTC),
             revertido=d.get("reverted", False),
-            id_registro=d.get("record_id", ""),
-            estado_serializado=d.get("serialized_state", {}),
         )
         entry._ruta_origen = Path(d.get("source_path", "."))
         entry._ruta_destino = Path(d.get("destination_path", "."))

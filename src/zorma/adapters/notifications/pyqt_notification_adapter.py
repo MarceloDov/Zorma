@@ -19,7 +19,6 @@ class PyQtNotificationAdapter(QObject):
 
     _tray_icon: QSystemTrayIcon | None
     _enabled: bool
-    _sound: bool
 
     def __init__(self, tray_icon: QSystemTrayIcon | None = None) -> None:
         """
@@ -28,7 +27,6 @@ class PyQtNotificationAdapter(QObject):
         super().__init__()
         self._tray_icon = tray_icon
         self._enabled = True
-        self._sound = True
         self._notification_signal.connect(self._show_message)
 
     def set_tray_icon(self, tray_icon: QSystemTrayIcon) -> None:
@@ -62,13 +60,11 @@ class PyQtNotificationAdapter(QObject):
         if self._tray_icon:
             self._tray_icon.showMessage(title, message, QSystemTrayIcon.MessageIcon(icon_val), duration)
 
-    def configure(self, enabled: bool, sound: bool) -> None:
+    def configure(self, enabled: bool) -> None:
         """
         Configura el estado de las notificaciones.
 
         Args:
             enabled: Habilita o deshabilita las notificaciones.
-            sound: Habilita o deshabilita el sonido de las notificaciones.
         """
         self._enabled = enabled
-        self._sound = sound

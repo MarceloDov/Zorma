@@ -30,12 +30,6 @@ class EstadoClasificacion(StrEnum):
     FILTRADO = "filtered_out"
 
 
-class TipoOperacion(StrEnum):
-    MOVER = "move"
-    COPIAR = "copy"
-    RENOMBRAR = "rename"
-
-
 class UrgenciaNotificacion(StrEnum):
     BAJA = "low"
     NORMAL = "normal"

@@ -144,12 +144,10 @@ class SettingsView(QWidget):
     def _on_notif_toggled(self, enabled: bool) -> None:
         self._notifications_enabled = enabled
         if self._notification_service is not None:
-            self._notification_service.configure(enabled, self._sound_enabled)
+            self._notification_service.configure(enabled)
 
     def _on_sound_toggled(self, enabled: bool) -> None:
         self._sound_enabled = enabled
-        if self._notification_service is not None:
-            self._notification_service.configure(self._notifications_enabled, enabled)
 
     def _check_disk_space(self) -> None:
         try:

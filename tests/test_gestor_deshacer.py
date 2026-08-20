@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, create_autospec
 
 from zorma.adapters.persistence.zorma_repository import ZormaRepository
-from zorma.core.models.enums import EstadoClasificacion, TipoOperacion
+from zorma.core.models.enums import EstadoClasificacion, TipoAccion
 from zorma.core.models.pila_deshacer import PilaDeshacer
 from zorma.core.models.resultado_clasificacion import ResultadoClasificacion
 from zorma.core.services.gestor_deshacer import GestorDeshacer
@@ -55,7 +55,7 @@ class TestGestorDeshacer:
         dst.parent.mkdir(parents=True)
         dst.write_text("moved file")
         entry = PilaDeshacer(
-            tipo_operacion=TipoOperacion.MOVER,
+            tipo_operacion=TipoAccion.MOVER,
             _ruta_origen=orig,
             _ruta_destino=dst,
         )
@@ -79,7 +79,7 @@ class TestGestorDeshacer:
         dst.parent.mkdir(parents=True)
         dst.write_text("moved file")
         entry = PilaDeshacer(
-            tipo_operacion=TipoOperacion.MOVER,
+            tipo_operacion=TipoAccion.MOVER,
             _ruta_origen=orig,
             _ruta_destino=dst,
         )

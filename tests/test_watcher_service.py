@@ -15,8 +15,7 @@ class TestWatcherService:
     def setup_method(self) -> None:
         self.watcher = create_autospec(WatchdogFileWatcher)
         self.repo = create_autospec(ZormaRepository, instance=True)
-        self.history = create_autospec(ZormaRepository, instance=True)
-        self.service = ServicioClasificacion(self.watcher, self.repo, self.history)
+        self.service = ServicioClasificacion(self.watcher, self.repo)
 
     def test_start_monitoring(self) -> None:
         paths = [Path("/watch")]
