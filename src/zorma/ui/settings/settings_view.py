@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
@@ -17,24 +17,24 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ...config.settings import DEFAULT_DISK_ALERT_THRESHOLD, DISK_CHECK_INTERVAL
 from ...adapters.notifications.pyqt_notification_adapter import PyQtNotificationAdapter
-from ...core.models.notification_urgency import NotificationUrgency
-from ..shared.styles import COLORS, FONT_SIZES, SPACING, btn_primary, card_disk
+from ...config.settings import DEFAULT_DISK_ALERT_THRESHOLD, DISK_CHECK_INTERVAL
+from ...core.models.enums import UrgenciaNotificacion
+from ..shared.styles import COLORS, SPACING
 from ..shared.toast import show_toast
 from ..shared.widgets import Card
 
 
 class SettingsView(QWidget):
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
+    def __init__(self, data_dir: Path | None = None) -> None:
         super().__init__()
         self._data_dir = data_dir or Path.home() / ".zorma"
         self._config_file = self._data_dir / "app_config.json"
-        self._notification_service: Optional[PyQtNotificationAdapter] = None
+        self._notification_service: PyQtNotificationAdapter | None = None
         self._disk_threshold = DEFAULT_DISK_ALERT_THRESHOLD
         self._notifications_enabled = True
         self._sound_enabled = True
-        self._config: Dict[str, Any] = {}
+        self._config: dict[str, Any] = {}
         self._load_config()
 
         self._disk_timer = QTimer(self)
@@ -173,7 +173,7 @@ class SettingsView(QWidget):
                     self._notification_service.notify(
                         "Espacio de disco bajo",
                         f"Solo {free_gb:.1f} GB restantes en la unidad {drive}.",
-                        NotificationUrgency.CRITICAL,
+                        UrgenciaNotificacion.CRITICA,
                     )
             else:
                 self._alerts_card.update_value("0")

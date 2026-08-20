@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
-from ...core.models.classification import ClassificationResult, ClassificationStatus
+from ...core.models.enums import EstadoClasificacion
+from ...core.models.resultado_clasificacion import ResultadoClasificacion
 from .styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, btn_secondary
 
 
@@ -15,8 +15,8 @@ class SidebarButton(QPushButton):
     def __init__(
         self,
         text: str,
-        icon_path: Optional[Path] = None,
-        parent: Optional[QWidget] = None,
+        icon_path: Path | None = None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.setCheckable(True)
@@ -43,7 +43,7 @@ class Card(QFrame):
         title: str,
         value: str,
         level: str = "primary",
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("card")
@@ -78,7 +78,7 @@ class Card(QFrame):
 class TimelineRow(QWidget):
     undo_clicked = pyqtSignal(object)
 
-    def __init__(self, result: ClassificationResult, can_undo: bool = False, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, result: ResultadoClasificacion, can_undo: bool = False, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._result = result
         self.setFixedHeight(40)
@@ -88,42 +88,42 @@ class TimelineRow(QWidget):
         layout.setSpacing(SPACING["sm"])
 
         icon_map = {
-            ClassificationStatus.SUCCESS: "✓",
-            ClassificationStatus.ERROR: "✗",
-            ClassificationStatus.SKIPPED: "–",
-            ClassificationStatus.CONFLICT: "⚠",
+            EstadoClasificacion.EXITO: "✓",
+            EstadoClasificacion.ERROR: "✗",
+            EstadoClasificacion.OMITIDO: "–",
+            EstadoClasificacion.CONFLICTO: "⚠",
         }
-        icon_text = icon_map.get(result.status, "•")
+        icon_text = icon_map.get(result.estado, "•")
         color_map = {
-            ClassificationStatus.SUCCESS: COLORS["success"],
-            ClassificationStatus.ERROR: COLORS["error"],
-            ClassificationStatus.SKIPPED: COLORS["text_muted"],
-            ClassificationStatus.CONFLICT: COLORS["warning"],
+            EstadoClasificacion.EXITO: COLORS["success"],
+            EstadoClasificacion.ERROR: COLORS["error"],
+            EstadoClasificacion.OMITIDO: COLORS["text_muted"],
+            EstadoClasificacion.CONFLICTO: COLORS["warning"],
         }
-        icon_color = color_map.get(result.status, COLORS["text_muted"])
+        icon_color = color_map.get(result.estado, COLORS["text_muted"])
 
         icon_label = QLabel(icon_text)
         icon_label.setStyleSheet(f"color: {icon_color}; font-size: 14px; font-weight: 700; min-width: 20px;")
         layout.addWidget(icon_label)
 
-        file_label = QLabel(result.file_name)
+        file_label = QLabel(result.nombre_archivo)
         file_label.setStyleSheet(
             f"color: {COLORS['text']}; font-size: {FONT_SIZES['base']}; font-weight: 500;"
         )
         file_label.setWordWrap(False)
         layout.addWidget(file_label, 1)
 
-        if result.rule_applied:
-            rule_label = QLabel(f"→ {result.rule_applied.name}")
+        if result.regla_aplicada:
+            rule_label = QLabel(f"→ {result.regla_aplicada.nombre}")
             rule_label.setStyleSheet(
                 f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['sm']};"
             )
             layout.addWidget(rule_label)
 
         action_text = "Movido"
-        if result.status == ClassificationStatus.ERROR:
+        if result.estado == EstadoClasificacion.ERROR:
             action_text = "Error"
-        elif result.status == ClassificationStatus.SKIPPED:
+        elif result.estado == EstadoClasificacion.OMITIDO:
             action_text = "Omitido"
 
         action_label = QLabel(action_text)
@@ -132,13 +132,13 @@ class TimelineRow(QWidget):
         )
         layout.addWidget(action_label)
 
-        time_label = QLabel(result.timestamp.strftime("%H:%M:%S"))
+        time_label = QLabel(result.marca_tiempo.strftime("%H:%M:%S"))
         time_label.setStyleSheet(
             f"color: {COLORS['text_muted']}; font-size: {FONT_SIZES['xs']}; min-width: 55px;"
         )
         layout.addWidget(time_label)
 
-        if can_undo and result.status == ClassificationStatus.SUCCESS:
+        if can_undo and result.estado == EstadoClasificacion.EXITO:
             undo_btn = QPushButton("↩")
             undo_btn.setFixedSize(28, 28)
             undo_btn.setStyleSheet(f"""
@@ -173,13 +173,13 @@ class TimelineRow(QWidget):
     def _on_undo(self) -> None:
         self.undo_clicked.emit(self._result)
 
-    def result(self) -> ClassificationResult:
+    def result(self) -> ResultadoClasificacion:
         return self._result
 
 
 class TimelineFeed(QScrollArea):
-    undo_requested = pyqtSignal(ClassificationResult)
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    undo_requested = pyqtSignal(ResultadoClasificacion)
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._max_rows = 100
 
@@ -207,10 +207,16 @@ class TimelineFeed(QScrollArea):
             title="Sin actividad aún",
             description="Seleccione una carpeta y clasifique archivos para ver la actividad aquí.",
         )
+        self._empty_icon_hidden = False
         self._layout.insertWidget(0, self._empty_icon)
 
-    def add_result(self, result: ClassificationResult, can_undo: bool = False) -> None:
-        self._empty_icon.hide()
+    def add_result(self, result: ResultadoClasificacion, can_undo: bool = False) -> None:
+        if not self._empty_icon_hidden:
+            try:
+                self._empty_icon.hide()
+            except RuntimeError:
+                pass
+            self._empty_icon_hidden = True
 
         row = TimelineRow(result, can_undo)
         row.undo_clicked.connect(self.undo_requested)
@@ -248,10 +254,10 @@ class EmptyState(QWidget):
         title: str,
         description: str,
         button_text: str = "",
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._button_signal: Optional[pyqtSignal] = None
+        self._button_signal: pyqtSignal | None = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING["3xl"], SPACING["3xl"], SPACING["3xl"], SPACING["3xl"])
@@ -302,7 +308,7 @@ class OnboardingWidget(QFrame):
     rules_requested = pyqtSignal()
     start_requested = pyqtSignal()
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("onboarding")
 

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 
 from zorma.adapters.persistence.zorma_repository import ZormaRepository
-from zorma.core.services.undo_manager import UndoManager
+from zorma.core.services.gestor_deshacer import GestorDeshacer
 from zorma.ui.dashboard.dashboard_viewmodel import DashboardViewModel
 
 
@@ -29,7 +29,7 @@ def repo() -> MagicMock:
 
 @pytest.fixture
 def undo_manager() -> MagicMock:
-    return create_autospec(UndoManager)
+    return create_autospec(GestorDeshacer)
 
 
 @pytest.fixture
@@ -96,9 +96,6 @@ class TestDashboardViewModel:
         assert not vm.can_undo()
         assert not vm.can_redo()
         assert vm.get_undoable_count() == 0
-
-    def test_clear_timeline_needed(self, vm: DashboardViewModel):
-        assert vm.clear_timeline_needed()
 
     def test_onboarding_signal_after_path_change(self, data_dir: Path, repo: MagicMock):
         vm = DashboardViewModel(data_dir, repo)

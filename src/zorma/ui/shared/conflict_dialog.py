@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Optional
-
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -16,15 +14,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ...core.models.classification import ClassificationResult
-from ..shared.styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, btn_primary, btn_secondary, hex_to_rgba
+from ...core.models.resultado_clasificacion import ResultadoClasificacion
+from ..shared.styles import SPACING
 
 
 class ConflictDialog(QDialog):
     def __init__(
         self,
-        conflicts: List[ClassificationResult],
-        parent: Optional[QWidget] = None,
+        conflicts: list[ResultadoClasificacion],
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._conflicts = conflicts
@@ -105,10 +103,10 @@ class ConflictDialog(QDialog):
         for c in self._conflicts:
             row = self._table.rowCount()
             self._table.insertRow(row)
-            self._table.setItem(row, 0, QTableWidgetItem(c.file_name))
-            dest = str(c.destination_path) if c.destination_path else "—"
+            self._table.setItem(row, 0, QTableWidgetItem(c.nombre_archivo))
+            dest = str(c.ruta_destino) if c.ruta_destino else "—"
             self._table.setItem(row, 1, QTableWidgetItem(dest))
-            action_text = c.action_applied.action_type.value if c.action_applied else "—"
+            action_text = c.accion_aplicada.tipo_accion.value if c.accion_aplicada else "—"
             self._table.setItem(row, 2, QTableWidgetItem(action_text))
 
     def _on_overwrite_toggle(self, checked: bool) -> None:

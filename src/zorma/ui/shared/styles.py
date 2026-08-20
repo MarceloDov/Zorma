@@ -187,62 +187,6 @@ def hex_to_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r}, {g}, {b}, {alpha})"
 
 
-def card_disk(state: str = "normal") -> str:
-    border = COLORS["error"] if state == "warning" else COLORS["border"]
-    bottom = COLORS["error"] if state == "warning" else COLORS["primary"]
-    return f"""
-    QFrame#card {{
-        background-color: {COLORS["card"]};
-        border: 1px solid {border};
-        border-radius: {BORDER_RADIUS["lg"]};
-        border-bottom: 3px solid {bottom};
-    }}
-
-    QFrame#sidebar {{
-        background-color: {COLORS["sidebar"]};
-        border-right: 1px solid {COLORS["border"]};
-    }}
-
-    QLabel#logo {{
-        color: {COLORS["text_bright"]};
-        font-size: 22px;
-        font-weight: 800;
-        padding: 0 12px 20px 12px;
-    }}
-
-    QLabel#status_label {{
-        font-size: 12px;
-        font-weight: 600;
-        padding: 12px;
-    }}
-    QLabel#status_label[level="primary"] {{ color: {COLORS["primary"]}; }}
-    QLabel#status_label[level="error"] {{ color: {COLORS["error"]}; }}
-    QLabel#status_label[level="success"] {{ color: {COLORS["success"]}; }}
-    QLabel#status_label[level="warning"] {{ color: {COLORS["warning"]}; }}
-
-    QFrame#content {{
-        background-color: {COLORS["bg"]};
-    }}
-
-    QFrame#top_bar {{
-        background: transparent;
-    }}
-
-    QPushButton#theme_btn {{
-        background-color: transparent;
-        color: {COLORS['text']};
-        border: 1px solid {COLORS['border']};
-        border-radius: 6px;
-        font-size: 16px;
-    }}
-    QPushButton#theme_btn:hover {{
-        background-color: {COLORS['card_hover']};
-        border-color: {COLORS['border_light']};
-    }}
-
-    """
-
-
 def build_qss() -> str:
     """Construye la hoja de estilos QSS usando la paleta COLORS activa."""
     return f"""
@@ -726,7 +670,7 @@ QPushButton#action_btn[state="active"]:hover {{
         font-size: 12px;
         font-weight: 600;
     }}
-    
+
     /* Reglas para RuleDialog */
     QLabel#rule_header {{
         color: {COLORS["text_bright"]};
@@ -740,7 +684,7 @@ QPushButton#action_btn[state="active"]:hover {{
     QLabel#error_label {{
         color: {COLORS["error"]};
     }}
-    
+
     QFrame#card {{
         background-color: {COLORS["card"]};
         border: 1px solid {COLORS["border"]};
@@ -764,7 +708,7 @@ QPushButton#action_btn[state="active"]:hover {{
         border-color: {COLORS["border_light"]};
         background-color: {COLORS["card_hover"]};
     }}
-    
+
     /* Reglas para SidebarButton */
     QPushButton#sidebar_btn {{
         background-color: transparent;

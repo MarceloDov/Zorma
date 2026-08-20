@@ -41,7 +41,7 @@ zorma
 
 ## Estructura
 
-```
+```text
 src/zorma/
 ├── __main__.py        # Punto de entrada
 ├── core/              # Lógica de dominio: servicios, modelos, puertos

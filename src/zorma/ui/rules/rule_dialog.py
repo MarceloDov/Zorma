@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -19,37 +18,38 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ...core.models.rule import ActionType, ConditionType, Rule, RuleAction
-from ..shared.styles import COLORS, btn_primary, btn_secondary
+from ...core.models.accion_regla import AccionRegla
+from ...core.models.enums import TipoAccion, TipoCondicion
+from ...core.models.regla import Regla
 
 CONDITION_LABELS = {
-    ConditionType.EXTENSION: "Extensión",
-    ConditionType.SIZE: "Tamaño",
-    ConditionType.DATE: "Fecha",
-    ConditionType.NAME: "Nombre",
+    TipoCondicion.EXTENSION: "Extensión",
+    TipoCondicion.TAMANIO: "Tamaño",
+    TipoCondicion.FECHA: "Fecha",
+    TipoCondicion.NOMBRE: "Nombre",
 }
 
 ACTION_LABELS = {
-    ActionType.MOVE: "Mover",
-    ActionType.COPY: "Copiar",
-    ActionType.RENAME: "Renombrar",
+    TipoAccion.MOVER: "Mover",
+    TipoAccion.COPIAR: "Copiar",
+    TipoAccion.RENOMBRAR: "Renombrar",
 }
 
 
 class RuleDialog(QDialog):
     def __init__(
         self,
-        parent: Optional[QWidget] = None,
-        rule: Optional[Rule] = None,
-        action: Optional[RuleAction] = None,
+        parent: QWidget | None = None,
+        rule: Regla | None = None,
+        action: AccionRegla | None = None,
     ) -> None:
         super().__init__(parent)
         self._rule = rule
         self._action = action
         self._editing = rule is not None
 
-        self.result_rule: Optional[Rule] = None
-        self.result_action: Optional[RuleAction] = None
+        self.result_rule: Regla | None = None
+        self.result_action: AccionRegla | None = None
 
         self.setWindowTitle("Editar Regla" if self._editing else "Nueva Regla")
         self.setMinimumWidth(520)
@@ -80,7 +80,7 @@ class RuleDialog(QDialog):
         form.addRow("", self._enabled_check)
 
         self._condition_type = QComboBox()
-        for ct in ConditionType:
+        for ct in TipoCondicion:
             self._condition_type.addItem(CONDITION_LABELS[ct], ct)
         self._condition_type.setAccessibleName("Tipo de condición")
         self._condition_type.currentIndexChanged.connect(self._on_condition_type_changed)
@@ -96,7 +96,7 @@ class RuleDialog(QDialog):
         form.addRow("", self._condition_hint)
 
         self._action_type = QComboBox()
-        for at in ActionType:
+        for at in TipoAccion:
             self._action_type.addItem(ACTION_LABELS[at], at)
         self._action_type.currentIndexChanged.connect(self._on_action_type_changed)
         form.addRow("Tipo de acción:", self._action_type)
@@ -172,22 +172,22 @@ class RuleDialog(QDialog):
 
         if not cond_val:
             errors.append("El valor de la condición no puede estar vacío.")
-        elif cond_type == ConditionType.EXTENSION:
+        elif cond_type == TipoCondicion.EXTENSION:
             parts = [e.strip() for e in cond_val.split(",")]
             if not parts or not any(parts):
                 errors.append("Indique al menos una extensión, ej. .mp4,.mkv")
-        elif cond_type == ConditionType.SIZE:
+        elif cond_type == TipoCondicion.TAMANIO:
             if not self._SIZE_RE.match(cond_val):
                 errors.append("Formato inválido. Ej: >100 MB, <=1 GB, ==512 KB")
-        elif cond_type == ConditionType.DATE:
+        elif cond_type == TipoCondicion.FECHA:
             if not self._DATE_RE.match(cond_val):
                 errors.append("Formato inválido. Ej: <7 días, >30 días, <1 hora")
-        elif cond_type == ConditionType.NAME:
+        elif cond_type == TipoCondicion.NOMBRE:
             if not cond_val:
                 errors.append("El valor del nombre no puede estar vacío.")
 
-        is_move_copy = action_type in (ActionType.MOVE, ActionType.COPY)
-        is_rename = action_type == ActionType.RENAME
+        is_move_copy = action_type in (TipoAccion.MOVER, TipoAccion.COPIAR)
+        is_rename = action_type == TipoAccion.RENOMBRAR
         if is_move_copy and not target:
             errors.append("La carpeta destino es obligatoria para mover o copiar.")
         if is_rename:
@@ -205,7 +205,7 @@ class RuleDialog(QDialog):
         self._update_hints()
 
     def _on_action_type_changed(self) -> None:
-        is_rename = self._action_type.currentData() == ActionType.RENAME
+        is_rename = self._action_type.currentData() == TipoAccion.RENOMBRAR
         self._rename_pattern.setVisible(is_rename)
         parent = self._rename_pattern.parent()
         if parent is not None:
@@ -216,17 +216,17 @@ class RuleDialog(QDialog):
     def _update_hints(self) -> None:
         ct = self._condition_type.currentData()
         hints = {
-            ConditionType.EXTENSION: "Extensiones separadas por coma, ej. .mp4,.mkv,.avi",
-            ConditionType.SIZE: 'ej. >100 MB, <1 GB, ==512 KB, >=10 MB',
-            ConditionType.DATE: 'ej. <7 días, >30 días, <1 hora',
-            ConditionType.NAME: 'ej. report (contiene) o report_* (glob)',
+            TipoCondicion.EXTENSION: "Extensiones separadas por coma, ej. .mp4,.mkv,.avi",
+            TipoCondicion.TAMANIO: 'ej. >100 MB, <1 GB, ==512 KB, >=10 MB',
+            TipoCondicion.FECHA: 'ej. <7 días, >30 días, <1 hora',
+            TipoCondicion.NOMBRE: 'ej. report (contiene) o report_* (glob)',
         }
         self._condition_hint.setText(hints.get(ct, ""))
         self._condition_value.setPlaceholderText({
-            ConditionType.EXTENSION: ".mp4,.mkv,.avi",
-            ConditionType.SIZE: ">100 MB",
-            ConditionType.DATE: "<7 días",
-            ConditionType.NAME: "report",
+            TipoCondicion.EXTENSION: ".mp4,.mkv,.avi",
+            TipoCondicion.TAMANIO: ">100 MB",
+            TipoCondicion.FECHA: "<7 días",
+            TipoCondicion.NOMBRE: "report",
         }.get(ct, ""))
 
     def _browse_folder(self) -> None:
@@ -236,19 +236,19 @@ class RuleDialog(QDialog):
 
     def _load_data(self) -> None:
         if self._rule is not None:
-            self._name_input.setText(self._rule.name)
-            self._enabled_check.setChecked(self._rule.enabled)
-            idx = self._condition_type.findData(self._rule.condition_type)
+            self._name_input.setText(self._rule.nombre)
+            self._enabled_check.setChecked(self._rule.habilitada)
+            idx = self._condition_type.findData(self._rule.tipo_condicion)
             if idx >= 0:
                 self._condition_type.setCurrentIndex(idx)
-            self._condition_value.setText(self._rule.condition_value)
+            self._condition_value.setText(self._rule.valor_condicion)
 
         if self._action is not None:
-            idx = self._action_type.findData(self._action.action_type)
+            idx = self._action_type.findData(self._action.tipo_accion)
             if idx >= 0:
                 self._action_type.setCurrentIndex(idx)
-            self._target_folder.setText(self._action.target_folder)
-            self._rename_pattern.setText(self._action.rename_pattern)
+            self._target_folder.setText(self._action.carpeta_destino)
+            self._rename_pattern.setText(self._action.patron_renombre)
 
         self._on_action_type_changed()
 
@@ -258,22 +258,22 @@ class RuleDialog(QDialog):
             self._name_input.setFocus()
             return
 
-        self.result_rule = Rule(
+        self.result_rule = Regla(
             id=self._rule.id if self._rule else "",
-            group_id=self._rule.group_id if self._rule else "",
-            name=name,
-            enabled=self._enabled_check.isChecked(),
-            condition_type=self._condition_type.currentData(),
-            condition_value=self._condition_value.text().strip(),
+            id_grupo=self._rule.id_grupo if self._rule else "",
+            nombre=name,
+            habilitada=self._enabled_check.isChecked(),
+            tipo_condicion=self._condition_type.currentData(),
+            valor_condicion=self._condition_value.text().strip(),
         )
 
-        is_rename = self._action_type.currentData() == ActionType.RENAME
-        self.result_action = RuleAction(
+        is_rename = self._action_type.currentData() == TipoAccion.RENOMBRAR
+        self.result_action = AccionRegla(
             id=self._action.id if self._action else "",
-            rule_id=self.result_rule.id,
-            action_type=self._action_type.currentData(),
-            target_folder=self._target_folder.text().strip(),
-            rename_pattern=self._rename_pattern.text().strip() if is_rename else "",
+            id_regla=self.result_rule.id,
+            tipo_accion=self._action_type.currentData(),
+            carpeta_destino=self._target_folder.text().strip(),
+            patron_renombre=self._rename_pattern.text().strip() if is_rename else "",
         )
 
         self.accept()

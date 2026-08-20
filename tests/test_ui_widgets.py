@@ -5,10 +5,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QPushButton, QWidget
+from PyQt6.QtWidgets import QPushButton
 
-from zorma.core.models.classification import ClassificationResult, ClassificationStatus
-from zorma.core.models.rule import Rule
+from zorma.core.models.enums import EstadoClasificacion
+from zorma.core.models.resultado_clasificacion import ResultadoClasificacion
 from zorma.ui.shared.styles import COLORS
 from zorma.ui.shared.widgets import Card, EmptyState, OnboardingWidget, SidebarButton, TimelineFeed, TimelineRow
 
@@ -111,19 +111,18 @@ class TestOnboardingWidget:
 
 class TestTimelineRow:
     @pytest.fixture
-    def sample_result(self) -> ClassificationResult:
-        return ClassificationResult(
-            file_name="test.txt",
-            source_path=Path("/tmp/test.txt"),
-            destination_path=Path("/tmp/dest/test.txt"),
-            rule_applied=Rule(name="Docs"),
-            status=ClassificationStatus.SUCCESS,
+    def sample_result(self) -> ResultadoClasificacion:
+        return ResultadoClasificacion(
+            nombre_archivo="test.txt",
+            ruta_origen=Path("/tmp/test.txt"),
+            ruta_destino=Path("/tmp/dest/test.txt"),
+            estado=EstadoClasificacion.EXITO,
         )
 
     def test_renders_file_name(self, qtbot, sample_result):
         row = TimelineRow(sample_result)
         qtbot.addWidget(row)
-        assert row.result().file_name == "test.txt"
+        assert row.result().nombre_archivo == "test.txt"
 
     def test_no_undo_button_when_not_allowed(self, qtbot, sample_result):
         row = TimelineRow(sample_result, can_undo=False)
@@ -147,7 +146,7 @@ class TestTimelineRow:
         assert btn is not None
         qtbot.mouseClick(btn, Qt.MouseButton.LeftButton)
         assert len(emitted) == 1
-        assert emitted[0].file_name == "test.txt"
+        assert emitted[0].nombre_archivo == "test.txt"
 
 
 class TestTimelineFeed:
@@ -160,24 +159,23 @@ class TestTimelineFeed:
     def test_add_result_shows_row(self, qtbot):
         feed = TimelineFeed()
         qtbot.addWidget(feed)
-        result = ClassificationResult(
-            file_name="doc.pdf",
-            source_path=Path("/tmp/doc.pdf"),
-            rule_applied=Rule(name="Docs"),
-            status=ClassificationStatus.SUCCESS,
+        result = ResultadoClasificacion(
+            nombre_archivo="doc.pdf",
+            ruta_origen=Path("/tmp/doc.pdf"),
+            estado=EstadoClasificacion.EXITO,
         )
         feed.add_result(result)
         rows = feed.findChildren(TimelineRow)
         assert len(rows) == 1
-        assert rows[0].result().file_name == "doc.pdf"
+        assert rows[0].result().nombre_archivo == "doc.pdf"
 
     def test_clear_removes_rows(self, qtbot):
         feed = TimelineFeed()
         qtbot.addWidget(feed)
-        result = ClassificationResult(
-            file_name="doc.pdf",
-            source_path=Path("/tmp/doc.pdf"),
-            status=ClassificationStatus.SUCCESS,
+        result = ResultadoClasificacion(
+            nombre_archivo="doc.pdf",
+            ruta_origen=Path("/tmp/doc.pdf"),
+            estado=EstadoClasificacion.EXITO,
         )
         feed.add_result(result)
         feed.clear()

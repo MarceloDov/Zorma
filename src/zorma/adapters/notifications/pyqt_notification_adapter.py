@@ -1,28 +1,27 @@
 """
 Adaptador de notificaciones para PyQt.
 """
+
 from __future__ import annotations
 
-from typing import Optional
-
+from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QSystemTrayIcon
 
-from ...core.models.notification_urgency import NotificationUrgency
+from ...core.models.enums import UrgenciaNotificacion
 
-
-from PyQt6.QtCore import QObject, pyqtSignal
 
 class PyQtNotificationAdapter(QObject):
     """
     Implementación del servicio de notificaciones utilizando PyQt6 QSystemTrayIcon.
     """
+
     _notification_signal = pyqtSignal(str, str, int, int)
-    
-    _tray_icon: Optional[QSystemTrayIcon]
+
+    _tray_icon: QSystemTrayIcon | None
     _enabled: bool
     _sound: bool
 
-    def __init__(self, tray_icon: Optional[QSystemTrayIcon] = None) -> None:
+    def __init__(self, tray_icon: QSystemTrayIcon | None = None) -> None:
         """
         Inicializa el adaptador con un icono de bandeja opcional.
         """
@@ -42,7 +41,7 @@ class PyQtNotificationAdapter(QObject):
         self,
         title: str,
         message: str,
-        urgency: NotificationUrgency = NotificationUrgency.NORMAL,
+        urgency: UrgenciaNotificacion = UrgenciaNotificacion.NORMAL,
     ) -> None:
         """
         Envía una notificación al sistema.
@@ -51,11 +50,11 @@ class PyQtNotificationAdapter(QObject):
             return
 
         icon_map = {
-            NotificationUrgency.LOW: QSystemTrayIcon.MessageIcon.Information.value,
-            NotificationUrgency.NORMAL: QSystemTrayIcon.MessageIcon.Information.value,
-            NotificationUrgency.CRITICAL: QSystemTrayIcon.MessageIcon.Critical.value,
+            UrgenciaNotificacion.BAJA: QSystemTrayIcon.MessageIcon.Information.value,
+            UrgenciaNotificacion.NORMAL: QSystemTrayIcon.MessageIcon.Information.value,
+            UrgenciaNotificacion.CRITICA: QSystemTrayIcon.MessageIcon.Critical.value,
         }
-        duration = 3000 if urgency == NotificationUrgency.LOW else 5000
+        duration = 3000 if urgency == UrgenciaNotificacion.BAJA else 5000
         icon_val = icon_map.get(urgency, QSystemTrayIcon.MessageIcon.Information.value)
         self._notification_signal.emit(title, message, icon_val, duration)
 

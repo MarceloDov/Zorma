@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from ...adapters.persistence.zorma_repository import ZormaRepository
-from ...core.models.classification import ClassificationResult, ClassificationStatus
-from ...core.services.undo_manager import UndoManager
-from ...core.services.watcher_service import WatcherService
+from ...core.models.enums import EstadoClasificacion
+from ...core.models.resultado_clasificacion import ResultadoClasificacion
+from ...core.services.gestor_deshacer import GestorDeshacer
+from ...core.services.servicio_clasificacion import ServicioClasificacion
 from ..shared.styles import COLORS
 
 
@@ -19,9 +20,9 @@ class ScanWorker(QThread):
 
     def __init__(
         self,
-        watcher_service: WatcherService,
+        watcher_service: ServicioClasificacion,
         paths: list[Path],
-        parent: Optional[QObject] = None,
+        parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         self._watcher_service = watcher_service
@@ -32,7 +33,7 @@ class ScanWorker(QThread):
         self._cancelled = True
 
     def run(self) -> None:
-        results = self._watcher_service.preview_all(self._paths)
+        results = self._watcher_service.previsualizar_todos(self._paths)
         if not self._cancelled:
             self.scan_finished.emit(results)
 
@@ -45,9 +46,9 @@ class ClassifyWorker(QThread):
 
     def __init__(
         self,
-        watcher_service: WatcherService,
-        results: list[ClassificationResult],
-        parent: Optional[QObject] = None,
+        watcher_service: ServicioClasificacion,
+        results: list[ResultadoClasificacion],
+        parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         self._watcher_service = watcher_service
@@ -65,11 +66,11 @@ class ClassifyWorker(QThread):
             if self._cancelled:
                 break
             self.progress.emit(i + 1, total)
-            if self._watcher_service is None or r.source_path is None:
+            if self._watcher_service is None or r.ruta_origen is None:
                 continue
-            actual = self._watcher_service.classify(r.source_path, overwrite=r.overwrite)
+            actual = self._watcher_service.clasificar(r.ruta_origen, overwrite=r.sobrescribir)
             self.file_done.emit(actual)
-            if actual.status == ClassificationStatus.SUCCESS:
+            if actual.estado == EstadoClasificacion.EXITO:
                 success_count += 1
             else:
                 error_count += 1
@@ -93,24 +94,24 @@ class DashboardViewModel(QObject):
     def __init__(
         self,
         data_dir: Path,
-        repo: Optional[ZormaRepository] = None,
-        undo_manager: Optional[UndoManager] = None,
-        watcher_service: Optional[WatcherService] = None,
-        parent: Optional[QObject] = None,
+        repo: ZormaRepository | None = None,
+        gestor_deshacer: GestorDeshacer | None = None,
+        watcher_service: ServicioClasificacion | None = None,
+        parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         self._data_dir = data_dir
         self._repo = repo
-        self._undo_manager = undo_manager
+        self._gestor_deshacer = gestor_deshacer
         self._watcher_service = watcher_service
-        self._watch_path: Optional[Path] = None
+        self._watch_path: Path | None = None
         self._total_classified = 0
         self._total_errors = 0
         self._classifying = False
         self._watcher_running = False
         self._auto_classify = False
-        self._scan_worker: Optional[ScanWorker] = None
-        self._classify_worker: Optional[ClassifyWorker] = None
+        self._scan_worker: ScanWorker | None = None
+        self._classify_worker: ClassifyWorker | None = None
         self._load_settings()
 
     # --- Settings ---
@@ -147,13 +148,13 @@ class DashboardViewModel(QObject):
 
     # --- Watch path ---
 
-    def set_watch_path(self, path: Optional[Path]) -> None:
+    def set_watch_path(self, path: Path | None) -> None:
         self._watch_path = path
         self.watch_path_changed.emit(path)
         self._emit_ui_state()
         self._save_settings()
 
-    def get_watch_path(self) -> Optional[Path]:
+    def get_watch_path(self) -> Path | None:
         return self._watch_path
 
     def get_auto_classify(self) -> bool:
@@ -161,11 +162,11 @@ class DashboardViewModel(QObject):
 
     # --- Classification ---
 
-    def set_watcher_service(self, service: WatcherService) -> None:
+    def set_watcher_service(self, service: ServicioClasificacion) -> None:
         self._watcher_service = service
         self._load_history()
 
-    def get_watcher_service(self) -> Optional[WatcherService]:
+    def get_watcher_service(self) -> ServicioClasificacion | None:
         return self._watcher_service
 
     def run_scan(self) -> None:
@@ -180,7 +181,7 @@ class DashboardViewModel(QObject):
         self._scan_worker.scan_finished.connect(self._on_scan_finished)
         self._scan_worker.start()
 
-    def _on_scan_finished(self, results: list[ClassificationResult]) -> None:
+    def _on_scan_finished(self, results: list[ResultadoClasificacion]) -> None:
         self._classifying = False
         self.classifying_changed.emit(False)
 
@@ -196,7 +197,7 @@ class DashboardViewModel(QObject):
 
     scan_finished_for_preview = pyqtSignal(list)
 
-    def start_classify(self, results: list[ClassificationResult]) -> None:
+    def start_classify(self, results: list[ResultadoClasificacion]) -> None:
         if self._watcher_service is None:
             return
         self._classifying = True
@@ -215,7 +216,7 @@ class DashboardViewModel(QObject):
         self.status_text.emit(f"Clasificando {current} de {total}", COLORS["primary"])
 
     def _on_classify_file_done(self, result: object) -> None:
-        if isinstance(result, ClassificationResult):
+        if isinstance(result, ResultadoClasificacion):
             self._add_result(result)
 
     def _on_classify_finished(self, success_count: int, error_count: int) -> None:
@@ -290,48 +291,48 @@ class DashboardViewModel(QObject):
         for result in results:
             self._add_result(result)
 
-    def _add_result(self, result: ClassificationResult) -> None:
-        if result.status == ClassificationStatus.SUCCESS:
+    def _add_result(self, result: ResultadoClasificacion) -> None:
+        if result.estado == EstadoClasificacion.EXITO:
             self._total_classified += 1
-        elif result.status == ClassificationStatus.ERROR:
+        elif result.estado == EstadoClasificacion.ERROR:
             self._total_errors += 1
         self.counters_changed.emit(self._total_classified, self._total_errors)
         self.result_added.emit(result)
         self._emit_ui_state()
 
-    def _on_result(self, result: ClassificationResult) -> None:
+    def _on_result(self, result: ResultadoClasificacion) -> None:
         from PyQt6.QtCore import QTimer
         QTimer.singleShot(0, lambda: self._add_result(result))
 
     # --- Undo / Redo ---
 
     def can_undo(self) -> bool:
-        return self._undo_manager is not None and self._undo_manager.can_undo()
+        return self._gestor_deshacer is not None and self._gestor_deshacer.can_undo()
 
     def can_redo(self) -> bool:
-        return self._undo_manager is not None and self._undo_manager.can_redo()
+        return self._gestor_deshacer is not None and self._gestor_deshacer.can_redo()
 
     def get_undoable_count(self) -> int:
-        if self._undo_manager is None:
+        if self._gestor_deshacer is None:
             return 0
-        return len([e for e in self._undo_manager.get_undoable() if not e.reverted])
+        return len([e for e in self._gestor_deshacer.get_undoable() if not e.revertido])
 
-    def undo_file(self, result: ClassificationResult) -> None:
-        if self._undo_manager is None or result.source_path is None:
+    def undo_file(self, result: ResultadoClasificacion) -> None:
+        if self._gestor_deshacer is None or result.ruta_origen is None:
             return
-        undone = self._undo_manager.undo_by_source_path(result.source_path)
-        if undone is not None and undone.status == ClassificationStatus.SUCCESS:
+        undone = self._gestor_deshacer.undo_by_source_path(result.ruta_origen)
+        if undone is not None and undone.estado == EstadoClasificacion.EXITO:
             self._total_classified = max(0, self._total_classified - 1)
             self.counters_changed.emit(self._total_classified, self._total_errors)
             self._emit_ui_state()
 
     def undo_all(self) -> int:
-        if self._undo_manager is None:
+        if self._gestor_deshacer is None:
             return 0
         undone_count = 0
-        while self._undo_manager.can_undo():
-            result = self._undo_manager.undo()
-            if result is not None and result.status == ClassificationStatus.SUCCESS:
+        while self._gestor_deshacer.can_undo():
+            result = self._gestor_deshacer.undo()
+            if result is not None and result.estado == EstadoClasificacion.EXITO:
                 self._total_classified = max(0, self._total_classified - 1)
                 undone_count += 1
         self.counters_changed.emit(self._total_classified, self._total_errors)
@@ -339,20 +340,17 @@ class DashboardViewModel(QObject):
         return undone_count
 
     def redo_all(self) -> int:
-        if self._undo_manager is None:
+        if self._gestor_deshacer is None:
             return 0
         redone_count = 0
-        while self._undo_manager.can_redo():
-            result = self._undo_manager.redo()
-            if result is not None and result.status == ClassificationStatus.SUCCESS:
+        while self._gestor_deshacer.can_redo():
+            result = self._gestor_deshacer.redo()
+            if result is not None and result.estado == EstadoClasificacion.EXITO:
                 self._total_classified += 1
                 redone_count += 1
         self.counters_changed.emit(self._total_classified, self._total_errors)
         self._emit_ui_state()
         return redone_count
-
-    def clear_timeline_needed(self) -> bool:
-        return True
 
     # --- UI state helpers ---
 

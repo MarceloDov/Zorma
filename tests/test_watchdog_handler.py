@@ -1,11 +1,14 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 from watchdog.events import DirCreatedEvent, FileDeletedEvent, FileModifiedEvent, FileMovedEvent
 
 from zorma.adapters.watcher.watchdog_watcher import ZormaEventHandler
-from zorma.core.models.file_event import FileEvent
 from zorma.core.models.filter_config import FilterConfig
+
+if TYPE_CHECKING:
+    from zorma.core.models.evento_archivo import EventoArchivo
 
 
 class TestZormaEventHandler:
@@ -16,8 +19,8 @@ class TestZormaEventHandler:
         handler = ZormaEventHandler(callback)
         handler.on_created(FileModifiedEvent(str(f)))
         callback.assert_called_once()
-        event: FileEvent = callback.call_args[0][0]
-        assert event.event_type == "created"
+        event: EventoArchivo = callback.call_args[0][0]
+        assert event.tipo_evento.value == "created"
         assert event.src_path == f
 
     def test_on_modified(self, tmp_path: Path) -> None:
@@ -36,8 +39,8 @@ class TestZormaEventHandler:
         handler = ZormaEventHandler(callback)
         handler.on_moved(FileMovedEvent(str(src), str(dst)))
         callback.assert_called_once()
-        event: FileEvent = callback.call_args[0][0]
-        assert event.event_type == "moved"
+        event: EventoArchivo = callback.call_args[0][0]
+        assert event.tipo_evento.value == "moved"
         assert event.dest_path == dst
 
     def test_on_deleted(self, tmp_path: Path) -> None:

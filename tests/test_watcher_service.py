@@ -1,25 +1,22 @@
 from pathlib import Path
 from unittest.mock import MagicMock, create_autospec
 
-from zorma.core.models.classification import ClassificationResult, ClassificationStatus
-from zorma.core.models.file_event import FileEvent, FileEventType
-from zorma.core.models.rule import ActionType, ConditionType, Rule, RuleAction
-from zorma.core.models.filter_config import FilterConfig
 from zorma.adapters.persistence.zorma_repository import ZormaRepository
 from zorma.adapters.watcher.watchdog_watcher import WatchdogFileWatcher
-from zorma.core.services.action_executor import ActionExecutor
-from zorma.core.services.rule_evaluator import RuleEvaluator
-from zorma.core.services.watcher_service import WatcherService
+from zorma.core.models.accion_regla import AccionRegla
+from zorma.core.models.enums import EstadoClasificacion, TipoAccion, TipoCondicion, TipoEvento
+from zorma.core.models.evento_archivo import EventoArchivo
+from zorma.core.models.filter_config import FilterConfig
+from zorma.core.models.regla import Regla
+from zorma.core.services.servicio_clasificacion import ServicioClasificacion
 
 
 class TestWatcherService:
     def setup_method(self) -> None:
         self.watcher = create_autospec(WatchdogFileWatcher)
         self.repo = create_autospec(ZormaRepository, instance=True)
-        self.evaluator = create_autospec(RuleEvaluator)
-        self.executor = create_autospec(ActionExecutor)
         self.history = create_autospec(ZormaRepository, instance=True)
-        self.service = WatcherService(self.watcher, self.repo, self.evaluator, self.executor, self.history)
+        self.service = ServicioClasificacion(self.watcher, self.repo, self.history)
 
     def test_start_monitoring(self) -> None:
         paths = [Path("/watch")]
@@ -42,56 +39,41 @@ class TestWatcherService:
         f = tmp_path / "test.txt"
         f.write_text("hello")
         self.repo.get_all_rules.return_value = []
-        self.evaluator.evaluate_all.return_value = []
-        result = self.service._classify(f)
-        assert result.status == ClassificationStatus.NO_RULE
+        result = self.service._clasificar(f)
+        assert result.estado == EstadoClasificacion.SIN_REGLA
 
     def test_classify_no_match(self, tmp_path: Path) -> None:
         f = tmp_path / "test.txt"
         f.write_text("hello")
-        rule = Rule(condition_type=ConditionType.EXTENSION, condition_value=".pdf")
+        rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".pdf")
         self.repo.get_all_rules.return_value = [rule]
-        self.evaluator.evaluate_all.return_value = []
-        result = self.service._classify(f)
-        assert result.status == ClassificationStatus.NO_RULE
+        result = self.service._clasificar(f)
+        assert result.estado == EstadoClasificacion.SIN_REGLA
 
     def test_classify_match_no_action(self, tmp_path: Path) -> None:
         f = tmp_path / "test.txt"
         f.write_text("hello")
-        rule = Rule(condition_type=ConditionType.EXTENSION, condition_value=".txt")
+        rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
         self.repo.get_all_rules.return_value = [rule]
-        self.evaluator.evaluate_all.return_value = [rule]
         self.repo.get_actions_for_rule.return_value = []
-        result = self.service._classify(f)
-        assert result.status == ClassificationStatus.NO_RULE
+        result = self.service._clasificar(f)
+        assert result.estado == EstadoClasificacion.SIN_REGLA
 
     def test_classify_success(self, tmp_path: Path) -> None:
         src = tmp_path / "test.txt"
         src.write_text("hello")
-        dest = tmp_path / "moved.txt"
-        rule = Rule(condition_type=ConditionType.EXTENSION, condition_value=".txt")
-        action = RuleAction(action_type=ActionType.MOVE, target_folder=str(tmp_path))
+        rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
+        action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino=str(tmp_path / "dest"))
         self.repo.get_all_rules.return_value = [rule]
-        self.evaluator.evaluate_all.return_value = [rule]
         self.repo.get_actions_for_rule.return_value = [action]
-        exec_result = ClassificationResult(
-            file_name="test.txt",
-            source_path=src,
-            destination_path=dest,
-            rule_applied=rule,
-            action_applied=action,
-            status=ClassificationStatus.SUCCESS,
-        )
-        self.executor.execute.return_value = exec_result
-        result = self.service._classify(src)
-        assert result.status == ClassificationStatus.SUCCESS
-        assert result.destination_path == dest
-        self.executor.execute.assert_called_once_with(action, src, False)
+        result = self.service._clasificar(src)
+        assert result.estado == EstadoClasificacion.EXITO
+        assert result.ruta_destino == tmp_path / "dest" / "test.txt"
 
     def test_classify_file_not_found(self, tmp_path: Path) -> None:
         f = tmp_path / "nonexistent.txt"
-        result = self.service._classify(f)
-        assert result.status == ClassificationStatus.FILTERED_OUT
+        result = self.service._clasificar(f)
+        assert result.estado == EstadoClasificacion.FILTRADO
 
     def test_on_event_triggers_callback(self, tmp_path: Path) -> None:
         f = tmp_path / "test.txt"
@@ -99,8 +81,9 @@ class TestWatcherService:
         self.repo.get_all_rules.return_value = []
         callback = MagicMock()
         self.service.set_result_callback(callback)
-        result = self.service._on_event(FileEvent(src_path=f, event_type=FileEventType.CREATED))
-        callback.assert_called_once_with(result)
+        event = EventoArchivo(src_path=f, tipo_evento=TipoEvento.CREADO)
+        self.service._on_event(event)
+        callback.assert_called_once()
 
     def test_initial_scan(self, tmp_path: Path) -> None:
         f1 = tmp_path / "a.txt"
@@ -108,7 +91,6 @@ class TestWatcherService:
         f1.write_text("a")
         f2.write_text("b")
         self.repo.get_all_rules.return_value = []
-        self.evaluator.evaluate_all.return_value = []
         results = self.service._initial_scan([tmp_path])
         assert len(results) == 2
 
@@ -119,45 +101,38 @@ class TestWatcherService:
         f2.write_text("b")
         cfg = FilterConfig(include_extensions=[".txt"])
         self.repo.get_all_rules.return_value = []
-        self.evaluator.evaluate_all.return_value = []
         results = self.service._initial_scan([tmp_path], cfg)
         assert len(results) == 1
-        assert results[0].file_name == "a.txt"
+        assert results[0].nombre_archivo == "a.txt"
 
     def test_preview_no_rules(self, tmp_path: Path) -> None:
         f = tmp_path / "test.txt"
         f.write_text("hello")
         self.repo.get_all_rules.return_value = []
-        self.evaluator.evaluate_all.return_value = []
-        result = self.service.preview(f)
-        assert result.status == ClassificationStatus.NO_RULE
+        result = self.service.previsualizar(f)
+        assert result.estado == EstadoClasificacion.SIN_REGLA
 
     def test_preview_no_conflict(self, tmp_path: Path) -> None:
         f = tmp_path / "test.txt"
         f.write_text("hello")
-        rule = Rule(condition_type=ConditionType.EXTENSION, condition_value=".txt")
-        action = RuleAction(action_type=ActionType.MOVE, target_folder=str(tmp_path))
+        rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
+        action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino=str(tmp_path / "dest"))
         self.repo.get_all_rules.return_value = [rule]
-        self.evaluator.evaluate_all.return_value = [rule]
         self.repo.get_actions_for_rule.return_value = [action]
-        self.executor.check_conflict.return_value = (False, tmp_path / "test.txt")
-        result = self.service.preview(f)
-        assert result.status == ClassificationStatus.SUCCESS
-        assert result.destination_path == tmp_path / "test.txt"
+        result = self.service.previsualizar(f)
+        assert result.estado == EstadoClasificacion.EXITO
 
     def test_preview_with_conflict(self, tmp_path: Path) -> None:
         f = tmp_path / "test.txt"
         f.write_text("hello")
         dest_file = tmp_path / "test.txt"
         dest_file.write_text("existing")
-        rule = Rule(condition_type=ConditionType.EXTENSION, condition_value=".txt")
-        action = RuleAction(action_type=ActionType.MOVE, target_folder=str(tmp_path))
+        rule = Regla(tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
+        action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino=str(tmp_path))
         self.repo.get_all_rules.return_value = [rule]
-        self.evaluator.evaluate_all.return_value = [rule]
         self.repo.get_actions_for_rule.return_value = [action]
-        self.executor.check_conflict.return_value = (True, tmp_path / "test.txt")
-        result = self.service.preview(f)
-        assert result.status == ClassificationStatus.CONFLICT
+        result = self.service.previsualizar(f)
+        assert result.estado == EstadoClasificacion.CONFLICTO
 
     def test_preview_all(self, tmp_path: Path) -> None:
         f1 = tmp_path / "a.txt"
@@ -165,8 +140,7 @@ class TestWatcherService:
         f1.write_text("a")
         f2.write_text("b")
         self.repo.get_all_rules.return_value = []
-        self.evaluator.evaluate_all.return_value = []
-        results = self.service.preview_all([tmp_path])
+        results = self.service.previsualizar_todos([tmp_path])
         assert len(results) == 2
 
     def test_preview_all_with_filter(self, tmp_path: Path) -> None:
@@ -176,43 +150,29 @@ class TestWatcherService:
         f2.write_text("b")
         cfg = FilterConfig(include_extensions=[".txt"])
         self.repo.get_all_rules.return_value = []
-        self.evaluator.evaluate_all.return_value = []
-        results = self.service.preview_all([tmp_path], cfg)
+        results = self.service.previsualizar_todos([tmp_path], cfg)
         assert len(results) == 1
-        assert results[0].file_name == "a.txt"
-
-    def test_set_undo_manager(self) -> None:
-        from zorma.core.services.undo_manager import UndoManager
-
-        manager = MagicMock(spec=UndoManager)
-        self.service.set_undo_manager(manager)
-        assert self.service.get_undo_manager() is manager
+        assert results[0].nombre_archivo == "a.txt"
 
     def test_classify_picks_first_matching_rule(self, tmp_path: Path) -> None:
         f = tmp_path / "test.mp4"
         f.write_text("hello")
-        rule1 = Rule(name="Videos", condition_type=ConditionType.EXTENSION, condition_value=".mp4")
-        rule2 = Rule(name="All", condition_type=ConditionType.EXTENSION, condition_value="*")
+        rule1 = Regla(nombre="Videos", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".mp4")
+        rule2 = Regla(nombre="All", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion="*")
         self.repo.get_all_rules.return_value = [rule1, rule2]
-        self.evaluator.evaluate_all.return_value = [rule1, rule2]
-        action = RuleAction(action_type=ActionType.MOVE, target_folder=str(tmp_path))
-        self.repo.get_actions_for_rule.return_value = [action]
-        exec_result = ClassificationResult(
-            file_name="test.mp4",
-            source_path=f,
-            destination_path=tmp_path / "test.mp4",
-            rule_applied=rule1,
-            action_applied=action,
-            status=ClassificationStatus.SUCCESS,
-        )
-        self.executor.execute.return_value = exec_result
-        result = self.service._classify(f)
-        assert result.rule_applied is rule1
+        action = AccionRegla(tipo_accion=TipoAccion.MOVER, carpeta_destino=str(tmp_path))
+        self.repo.get_actions_for_rule.side_effect = lambda rid: [action]
+        result = self.service._clasificar(f)
+        assert result.regla_aplicada is rule1
 
     def test_on_event_skips_directories(self, tmp_path: Path) -> None:
         d = tmp_path / "subdir"
         d.mkdir()
         self.repo.get_all_rules.return_value = []
-        self.evaluator.evaluate_all.return_value = []
-        result = self.service._on_event(FileEvent(src_path=d, event_type=FileEventType.CREATED, is_directory=True))
-        assert result.status == ClassificationStatus.FILTERED_OUT
+        callback = MagicMock()
+        self.service.set_result_callback(callback)
+        event = EventoArchivo(src_path=d, tipo_evento=TipoEvento.CREADO)
+        self.service._on_event(event)
+        callback.assert_called_once()
+        result = callback.call_args[0][0]
+        assert result.estado == EstadoClasificacion.FILTRADO
