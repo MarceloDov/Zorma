@@ -26,18 +26,16 @@ class ServicioClasificacion:
         self,
         watcher: WatchdogFileWatcher,
         repo: ZormaRepository,
-        history: ZormaRepository,
     ) -> None:
         self._watcher = watcher
         self._repo = repo
-        self._history = history
         self._result_callback: Callable[[ResultadoClasificacion], None] | None = None
 
     def set_result_callback(self, callback: Callable[[ResultadoClasificacion], None]) -> None:
         self._result_callback = callback
 
     def get_history(self) -> list[ResultadoClasificacion]:
-        return self._history.get_history()
+        return self._repo.get_history()
 
     def start_monitoring(
         self,
@@ -62,13 +60,13 @@ class ServicioClasificacion:
             )
         else:
             result = self._clasificar(event.src_path)
-            self._history.add_history(result)
+            self._repo.add_history(result)
         if self._result_callback:
             self._result_callback(result)
 
     def clasificar(self, file_path: Path, overwrite: bool = False) -> ResultadoClasificacion:
         result = self._clasificar(file_path, overwrite)
-        self._history.add_history(result)
+        self._repo.add_history(result)
         return result
 
     _SKIP_DIRS = {"node_modules", ".git", "__pycache__", "venv", ".venv", "dist", "build", ".tox", ".mypy_cache"}

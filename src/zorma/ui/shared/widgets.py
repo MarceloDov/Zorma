@@ -257,7 +257,6 @@ class EmptyState(QWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._button_signal: pyqtSignal | None = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING["3xl"], SPACING["3xl"], SPACING["3xl"], SPACING["3xl"])

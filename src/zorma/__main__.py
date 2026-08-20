@@ -34,7 +34,6 @@ def main() -> None:
     watcher_service = ServicioClasificacion(
         watcher=WatchdogFileWatcher(),
         repo=repo,
-        history=repo,
     )
 
     window = MainWindow(

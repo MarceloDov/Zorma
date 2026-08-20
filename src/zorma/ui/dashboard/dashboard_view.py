@@ -79,7 +79,7 @@ class DashboardView(QWidget):
 
     def _create_cards(self) -> QHBoxLayout:
         rules_count = self._vm.get_rules_count()
-        self._card_total = Card("Clasificados", "0", "primary")
+        self._card_total = Card("Clasificados", "0", "brand")
         self._card_total.setObjectName("card_total")
         self._card_rules = Card("Reglas Activas", rules_count, "success")
         self._card_rules.setObjectName("card_rules")

@@ -5,10 +5,9 @@ import shutil
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 from uuid import uuid4
 
-from .enums import TipoOperacion
+from .enums import TipoAccion
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PilaDeshacer:
     id: str = field(default_factory=lambda: uuid4().hex)
-    id_registro: str = ""
-    tipo_operacion: TipoOperacion = TipoOperacion.MOVER
-    estado_serializado: dict[str, Any] = field(default_factory=dict)
+    tipo_operacion: TipoAccion = TipoAccion.MOVER
     marca_tiempo: datetime = field(default_factory=lambda: datetime.now(UTC))
     revertido: bool = False
 
@@ -34,9 +31,9 @@ class PilaDeshacer:
             logger.warning("Cannot undo: file not found: %s", src)
             return False
         try:
-            if self.tipo_operacion in (TipoOperacion.MOVER, TipoOperacion.RENOMBRAR):
+            if self.tipo_operacion in (TipoAccion.MOVER, TipoAccion.RENOMBRAR):
                 shutil.move(str(src), str(dst))
-            elif self.tipo_operacion == TipoOperacion.COPIAR:
+            elif self.tipo_operacion == TipoAccion.COPIAR:
                 src.unlink()
             self.revertido = True
             return True

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 import logging
+import operator
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -58,7 +59,6 @@ class Regla:
     def obtener_descripcion(self) -> str:
         return f"{self.nombre} ({self.tipo_condicion.value}: {self.valor_condicion})"
 
-    # Métodos privados copiados de RuleEvaluator
     def _eval_extension(self, file: Path) -> bool:
         value = self.valor_condicion
         exts = [e.strip().lower().lstrip(".") for e in value.split(",")]
@@ -81,11 +81,11 @@ class Regla:
         if unit:
             threshold *= self._SIZE_MULTIPLIERS.get(unit.upper(), 1)
         ops: dict[str, Callable[[int, int], bool]] = {
-            "<": lambda f, t: f < t,
-            "<=": lambda f, t: f <= t,
-            ">": lambda f, t: f > t,
-            ">=": lambda f, t: f >= t,
-            "==": lambda f, t: f == t,
+            "<": operator.lt,
+            "<=": operator.le,
+            ">": operator.gt,
+            ">=": operator.ge,
+            "==": operator.eq,
         }
         fn = ops.get(op)
         if fn is None:

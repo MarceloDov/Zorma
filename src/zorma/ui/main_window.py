@@ -82,12 +82,16 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._build_content(), 1)
 
     def _build_sidebar(self) -> QFrame:
-        sidebar = self._create_sidebar_frame()
+        sidebar = QFrame()
+        sidebar.setFixedWidth(220)
+        sidebar.setObjectName("sidebar")
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(12, 20, 12, 20)
         sidebar_layout.setSpacing(4)
 
-        sidebar_layout.addWidget(self._create_logo())
+        logo = QLabel(APP_NAME)
+        logo.setObjectName("logo")
+        sidebar_layout.addWidget(logo)
 
         self._init_views()
         self._nav_buttons: list[SidebarButton] = []
@@ -100,22 +104,14 @@ class MainWindow(QMainWindow):
         self._create_nav_items(sidebar_layout)
 
         sidebar_layout.addStretch()
-        sidebar_layout.addWidget(self._create_status_label())
+
+        self._status_label = QLabel("● Monitor detenido")
+        self._status_label.setObjectName("status_label")
+        sidebar_layout.addWidget(self._status_label)
 
         self._nav_buttons[0].set_active(True)
 
         return sidebar
-
-    def _create_sidebar_frame(self) -> QFrame:
-        sidebar = QFrame()
-        sidebar.setFixedWidth(220)
-        sidebar.setObjectName("sidebar")
-        return sidebar
-
-    def _create_logo(self) -> QLabel:
-        logo = QLabel(APP_NAME)
-        logo.setObjectName("logo")
-        return logo
 
     def _create_nav_items(self, layout: QVBoxLayout) -> None:
         nav_items = [
@@ -299,10 +295,6 @@ class MainWindow(QMainWindow):
             self._status_label.setText(text)
             self._status_label.setStyleSheet(f"color: {color};")
 
-    def _on_theme_changed(self, theme: str) -> None:
-        if self._theme_btn is not None:
-            self._theme_btn.setText("☀" if theme == "light" else "☾")
-
     def _toggle_theme(self) -> None:
         new = "light" if self._theme == "dark" else "dark"
         self._theme = new
@@ -315,7 +307,8 @@ class MainWindow(QMainWindow):
 
         if self._rule_repository:
             self._rule_repository.set_theme(new)
-        self._on_theme_changed(new)
+        if self._theme_btn is not None:
+            self._theme_btn.setText("☀" if new == "light" else "☾")
 
         # Refrescar UI si es necesario (ej. pollish)
         self.style().unpolish(self)

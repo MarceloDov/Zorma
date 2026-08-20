@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..models.enums import EstadoClasificacion, TipoOperacion
+from ..models.enums import EstadoClasificacion, TipoAccion
 from ..models.pila_deshacer import PilaDeshacer
 from ..models.resultado_clasificacion import ResultadoClasificacion
 
@@ -30,7 +30,7 @@ class GestorDeshacer:
             return
         self._repo.redo_clear()
         entry = PilaDeshacer(
-            tipo_operacion=TipoOperacion.MOVER,
+            tipo_operacion=TipoAccion.MOVER,
             _ruta_origen=result.ruta_origen or Path(),
             _ruta_destino=result.ruta_destino or Path(),
         )
@@ -95,10 +95,10 @@ class GestorDeshacer:
                 logger.warning("Cannot redo: destination exists: %s", dest)
                 result.estado = EstadoClasificacion.OMITIDO
                 return result
-            if entry.tipo_operacion in (TipoOperacion.MOVER, TipoOperacion.COPIAR):
+            if entry.tipo_operacion in (TipoAccion.MOVER, TipoAccion.COPIAR):
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(src), str(dest))
-            elif entry.tipo_operacion == TipoOperacion.RENOMBRAR:
+            elif entry.tipo_operacion == TipoAccion.RENOMBRAR:
                 src.rename(dest)
             result.estado = EstadoClasificacion.EXITO
             entry.revertido = False

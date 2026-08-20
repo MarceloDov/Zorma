@@ -40,6 +40,8 @@ _DARK_COLORS = {
     "primary_pressed": "#6a8fd8",
     "accent": "#cba6f7",
     "accent_hover": "#b4b0e6",
+    "brand": "#fab387",
+    "brand_hover": "#f2a878",
     "success": "#a6e3a1",
     "success_hover": "#8bd389",
     "warning": "#f9e2af",
@@ -72,6 +74,8 @@ _LIGHT_COLORS = {
     "primary_pressed": "#1a56d4",
     "accent": "#8839ef",
     "accent_hover": "#7287fd",
+    "brand": "#fe640b",
+    "brand_hover": "#e35f0a",
     "success": "#40a02b",
     "success_hover": "#359a24",
     "warning": "#df8e1d",
@@ -162,14 +166,6 @@ def btn_error() -> str:
             background-color: {COLORS["error_hover"]};
         }}
     """
-
-
-def btn_small(style: str = "secondary") -> str:
-    base = {
-        "secondary": btn_secondary(),
-        "primary": btn_primary(),
-    }.get(style, btn_secondary())
-    return base.replace("padding: 10px 22px;", "padding: 6px 14px;font-size:12px;")
 
 
 def hex_to_rgba(hex_color: str, alpha: float) -> str:
@@ -427,15 +423,6 @@ QLabel {{
     color: {COLORS["text"]};
 }}
 
-QFrame#card {{
-    background-color: {COLORS["card"]};
-    border: 1px solid {COLORS["border"]};
-    border-radius: {BORDER_RADIUS["lg"]};
-}}
-QFrame#card:hover {{
-    border-color: {COLORS["border_light"]};
-}}
-
 QDialog {{
     background-color: {COLORS["bg"]};
 }}
@@ -517,232 +504,234 @@ QPushButton#action_btn[state="monitoring"] {{
     border: 1px solid {COLORS["success"]};
 }}
 QPushButton#action_btn[state="active"] {{
-    background-color: {COLORS["primary"]};
+    background-color: {COLORS["brand"]};
     color: {COLORS["bg"]};
     border: none;
     font-weight: 700;
 }}
 QPushButton#action_btn[state="active"]:hover {{
-        background-color: {COLORS["primary_hover"]};
-    }}
+    background-color: {COLORS["brand_hover"]};
+}}
 
-    /* Clases de botones */
-    QPushButton[class="primary"] {{
-        background-color: {COLORS["primary"]};
-        color: {COLORS["bg"]};
-        border: none;
-        border-radius: {BORDER_RADIUS["sm"]};
-        padding: 10px 22px;
-        font-weight: 700;
-        font-size: {FONT_SIZES["base"]};
-    }}
-    QPushButton[class="primary"]:hover {{
-        background-color: {COLORS["primary_hover"]};
-    }}
+/* Clases de botones */
+QPushButton[class="primary"] {{
+    background-color: {COLORS["primary"]};
+    color: {COLORS["bg"]};
+    border: none;
+    border-radius: {BORDER_RADIUS["sm"]};
+    padding: 10px 22px;
+    font-weight: 700;
+    font-size: {FONT_SIZES["base"]};
+}}
+QPushButton[class="primary"]:hover {{
+    background-color: {COLORS["primary_hover"]};
+}}
 
-    QPushButton[class="secondary"] {{
-        background-color: {COLORS["bg2"]};
-        color: {COLORS["text"]};
-        border: 1px solid {COLORS["border"]};
-        border-radius: {BORDER_RADIUS["sm"]};
-        padding: 10px 22px;
-        font-weight: 600;
-        font-size: {FONT_SIZES["base"]};
-    }}
-    QPushButton[class="secondary"]:hover {{
-        border-color: {COLORS["border_light"]};
-        background-color: {COLORS["card_hover"]};
-    }}
+QPushButton[class="secondary"] {{
+    background-color: {COLORS["bg2"]};
+    color: {COLORS["text"]};
+    border: 1px solid {COLORS["border"]};
+    border-radius: {BORDER_RADIUS["sm"]};
+    padding: 10px 22px;
+    font-weight: 600;
+    font-size: {FONT_SIZES["base"]};
+}}
+QPushButton[class="secondary"]:hover {{
+    border-color: {COLORS["border_light"]};
+    background-color: {COLORS["card_hover"]};
+}}
 
-    QPushButton[class="error"] {{
-        background-color: {COLORS["error"]};
-        color: {COLORS["bg"]};
-        border: none;
-        border-radius: {BORDER_RADIUS["sm"]};
-        padding: 10px 22px;
-        font-weight: 700;
-        font-size: {FONT_SIZES["base"]};
-    }}
-    QPushButton[class="error"]:hover {{
-        background-color: {COLORS["error_hover"]};
-    }}
+QPushButton[class="error"] {{
+    background-color: {COLORS["error"]};
+    color: {COLORS["bg"]};
+    border: none;
+    border-radius: {BORDER_RADIUS["sm"]};
+    padding: 10px 22px;
+    font-weight: 700;
+    font-size: {FONT_SIZES["base"]};
+}}
+QPushButton[class="error"]:hover {{
+    background-color: {COLORS["error_hover"]};
+}}
 
-    QLabel#rules_header {{
-        color: {COLORS["text_bright"]};
-        font-size: {FONT_SIZES["2xl"]};
-        font-weight: 700;
-    }}
+QLabel#rules_header {{
+    color: {COLORS["text_bright"]};
+    font-size: {FONT_SIZES["2xl"]};
+    font-weight: 700;
+}}
 
-    QLabel#rules_description {{
-        color: {COLORS["text_muted"]};
-        font-size: {FONT_SIZES["base"]};
-    }}
+QLabel#rules_description {{
+    color: {COLORS["text_muted"]};
+    font-size: {FONT_SIZES["base"]};
+}}
 
-    QTableWidget#rules_table {{
-        alternate-background-color: {COLORS["bg2"]};
-    }}
+QTableWidget#rules_table {{
+    alternate-background-color: {COLORS["bg2"]};
+}}
 
-    QLabel#history_header {{
-        color: {COLORS["text_bright"]};
-        font-size: {FONT_SIZES["2xl"]};
-        font-weight: 700;
-    }}
-    QLabel#history_info {{
-        color: {COLORS["text_muted"]};
-        font-size: {FONT_SIZES["base"]};
-    }}
-    QTableWidget#history_table {{
-        alternate-background-color: {COLORS["bg2"]};
-    }}
+QLabel#history_header {{
+    color: {COLORS["text_bright"]};
+    font-size: {FONT_SIZES["2xl"]};
+    font-weight: 700;
+}}
+QLabel#history_info {{
+    color: {COLORS["text_muted"]};
+    font-size: {FONT_SIZES["base"]};
+}}
+QTableWidget#history_table {{
+    alternate-background-color: {COLORS["bg2"]};
+}}
 
-    QLabel#settings_header {{
-        color: {COLORS["text_bright"]};
-        font-size: {FONT_SIZES["2xl"]};
-        font-weight: 800;
-    }}
+QLabel#settings_header {{
+    color: {COLORS["text_bright"]};
+    font-size: {FONT_SIZES["2xl"]};
+    font-weight: 800;
+}}
 
-    QLabel#disk_header {{
-        color: {COLORS["text_bright"]};
-        font-size: {FONT_SIZES["lg"]};
-        font-weight: 700;
-        margin-top: 8px;
-    }}
+QLabel#disk_header {{
+    color: {COLORS["text_bright"]};
+    font-size: {FONT_SIZES["lg"]};
+    font-weight: 700;
+    margin-top: 8px;
+}}
 
-    QLabel#no_alerts_label {{
-        font-size: {FONT_SIZES["md"]};
-        padding: {SPACING["xl"]}px;
-    }}
-    QLabel#no_alerts_label[level="normal"] {{ color: {COLORS["text_muted"]}; }}
-    QLabel#no_alerts_label[level="warning"] {{ color: {COLORS["warning"]}; }}
+QLabel#no_alerts_label {{
+    font-size: {FONT_SIZES["md"]};
+    padding: {SPACING["xl"]}px;
+}}
+QLabel#no_alerts_label[level="normal"] {{ color: {COLORS["text_muted"]}; }}
+QLabel#no_alerts_label[level="warning"] {{ color: {COLORS["warning"]}; }}
 
-    QLabel#pref_header {{
-        color: {COLORS["text_bright"]};
-        font-size: {FONT_SIZES["lg"]};
-        font-weight: 700;
-        margin-top: 8px;
-    }}
+QLabel#pref_header {{
+    color: {COLORS["text_bright"]};
+    font-size: {FONT_SIZES["lg"]};
+    font-weight: 700;
+    margin-top: 8px;
+}}
 
-    QLabel#data_label {{
-        color: {COLORS["text_muted"]};
-        font-size: {FONT_SIZES["xs"]};
-    }}
+QLabel#data_label {{
+    color: {COLORS["text_muted"]};
+    font-size: {FONT_SIZES["xs"]};
+}}
 
-    QFrame#onboarding {{
-        background-color: {COLORS["card"]};
-        border: 2px dashed {COLORS["border"]};
-        border-radius: {BORDER_RADIUS["lg"]};
-    }}
+QFrame#onboarding {{
+    background-color: {COLORS["card"]};
+    border: 2px dashed {COLORS["border"]};
+    border-radius: {BORDER_RADIUS["lg"]};
+}}
 
-    QFrame#conflict_header {{
-        background-color: {hex_to_rgba(COLORS['warning'], 0.1)};
-        border-radius: {BORDER_RADIUS['md']};
-        padding: 4px;
-    }}
-    QLabel#conflict_icon {{
-        font-size: 24px;
-    }}
-    QLabel#conflict_text {{
-        color: {COLORS["warning"]};
-        font-size: {FONT_SIZES["lg"]};
-        font-weight: 700;
-    }}
-    QLabel#conflict_desc {{
-        color: {COLORS["text_muted"]};
-        font-size: {FONT_SIZES["base"]};
-    }}
+QFrame#conflict_header {{
+    background-color: {hex_to_rgba(COLORS['warning'], 0.1)};
+    border-radius: {BORDER_RADIUS['md']};
+    padding: 4px;
+}}
+QLabel#conflict_icon {{
+    font-size: 24px;
+}}
+QLabel#conflict_text {{
+    color: {COLORS["warning"]};
+    font-size: {FONT_SIZES["lg"]};
+    font-weight: 700;
+}}
+QLabel#conflict_desc {{
+    color: {COLORS["text_muted"]};
+    font-size: {FONT_SIZES["base"]};
+}}
 
-    QLabel#preview_header {{
-        color: {COLORS["text_bright"]};
-        font-size: {FONT_SIZES["lg"]};
-        font-weight: 700;
-    }}
-    QLabel#preview_summary {{
-        color: {COLORS["text_muted"]};
-        font-size: {FONT_SIZES["base"]};
-    }}
-    QLabel#preview_selection_count {{
-        color: {COLORS["primary"]};
-        font-size: {FONT_SIZES["sm"]};
-        font-weight: 700;
-    }}
-    QLabel#preview_warning {{
-        color: {COLORS["warning"]};
-        font-size: 12px;
-        font-weight: 600;
-    }}
+QLabel#preview_header {{
+    color: {COLORS["text_bright"]};
+    font-size: {FONT_SIZES["lg"]};
+    font-weight: 700;
+}}
+QLabel#preview_summary {{
+    color: {COLORS["text_muted"]};
+    font-size: {FONT_SIZES["base"]};
+}}
+QLabel#preview_selection_count {{
+    color: {COLORS["primary"]};
+    font-size: {FONT_SIZES["sm"]};
+    font-weight: 700;
+}}
+QLabel#preview_warning {{
+    color: {COLORS["warning"]};
+    font-size: 12px;
+    font-weight: 600;
+}}
 
-    /* Reglas para RuleDialog */
-    QLabel#rule_header {{
-        color: {COLORS["text_bright"]};
-        font-size: 20px;
-        font-weight: 700;
-    }}
-    QLabel#hint_label {{
-        color: {COLORS["text_muted"]};
-        font-size: 11px;
-    }}
-    QLabel#error_label {{
-        color: {COLORS["error"]};
-    }}
+/* Reglas para RuleDialog */
+QLabel#rule_header {{
+    color: {COLORS["text_bright"]};
+    font-size: 20px;
+    font-weight: 700;
+}}
+QLabel#hint_label {{
+    color: {COLORS["text_muted"]};
+    font-size: 11px;
+}}
+QLabel#error_label {{
+    color: {COLORS["error"]};
+}}
 
-    QFrame#card {{
-        background-color: {COLORS["card"]};
-        border: 1px solid {COLORS["border"]};
-        border-radius: {BORDER_RADIUS["lg"]};
-    }}
-    QFrame#card:hover {{
-        border-color: {COLORS["primary"]};
-        background-color: {COLORS["card_hover"]};
-    }}
+QFrame#card {{
+    background-color: {COLORS["card"]};
+    border: 1px solid {COLORS["border"]};
+    border-radius: {BORDER_RADIUS["lg"]};
+}}
+QFrame#card:hover {{
+    border-color: {COLORS["primary"]};
+    background-color: {COLORS["card_hover"]};
+}}
 
-    QPushButton#browse_btn {{
-        background-color: {COLORS["bg2"]};
-        color: {COLORS["text"]};
-        border: 1px solid {COLORS["border"]};
-        border-radius: {BORDER_RADIUS["sm"]};
-        padding: 8px 16px;
-        font-weight: 600;
-        font-size: {FONT_SIZES["base"]};
-    }}
-    QPushButton#browse_btn:hover {{
-        border-color: {COLORS["border_light"]};
-        background-color: {COLORS["card_hover"]};
-    }}
+QPushButton#browse_btn {{
+    background-color: {COLORS["bg2"]};
+    color: {COLORS["text"]};
+    border: 1px solid {COLORS["border"]};
+    border-radius: {BORDER_RADIUS["sm"]};
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: {FONT_SIZES["base"]};
+}}
+QPushButton#browse_btn:hover {{
+    border-color: {COLORS["border_light"]};
+    background-color: {COLORS["card_hover"]};
+}}
 
-    /* Reglas para SidebarButton */
-    QPushButton#sidebar_btn {{
-        background-color: transparent;
-        color: {COLORS["text_muted"]};
-        border: none;
-        border-radius: {BORDER_RADIUS["md"]};
-        padding-left: 14px;
-        text-align: left;
-        font-size: {FONT_SIZES["md"]};
-        font-weight: 500;
-    }}
-    QPushButton#sidebar_btn:hover {{
-        background-color: {COLORS["card_hover"]};
-        color: {COLORS["text"]};
-    }}
-    QPushButton#sidebar_btn[active="true"] {{
-        background-color: {COLORS["primary"]};
-        color: {COLORS["bg"]};
-        font-weight: 700;
-    }}
+/* Reglas para SidebarButton */
+QPushButton#sidebar_btn {{
+    background-color: transparent;
+    color: {COLORS["text_muted"]};
+    border: none;
+    border-radius: {BORDER_RADIUS["md"]};
+    padding-left: 14px;
+    text-align: left;
+    font-size: {FONT_SIZES["md"]};
+    font-weight: 500;
+}}
+QPushButton#sidebar_btn:hover {{
+    background-color: {COLORS["card_hover"]};
+    color: {COLORS["text"]};
+}}
+QPushButton#sidebar_btn[active="true"] {{
+    background-color: {COLORS["primary"]};
+    color: {COLORS["bg"]};
+    font-weight: 700;
+}}
 
-    /* Reglas para Card */
-    QLabel#card_title {{
-        color: {COLORS["text_muted"]};
-        font-size: {FONT_SIZES["xs"]};
-        font-weight: 600;
-        letter-spacing: 1.2px;
-    }}
-    QLabel#card_value {{
-        font-size: {FONT_SIZES["xl"]};
-        font-weight: 800;
-    }}
-    QLabel#card_value[level="primary"] {{ color: {COLORS["primary"]}; }}
-    QLabel#card_value[level="error"] {{ color: {COLORS["error"]}; }}
-    QLabel#card_value[level="success"] {{ color: {COLORS["success"]}; }}
-    QLabel#card_value[level="warning"] {{ color: {COLORS["warning"]}; }}
+/* Reglas para Card */
+QLabel#card_title {{
+    color: {COLORS["text_muted"]};
+    font-size: {FONT_SIZES["xs"]};
+    font-weight: 600;
+    letter-spacing: 1.2px;
+}}
+QLabel#card_value {{
+    font-family: "Cascadia Code", "SF Mono", "Consolas", monospace;
+    font-size: {FONT_SIZES["xl"]};
+    font-weight: 800;
+}}
+QLabel#card_value[level="primary"] {{ color: {COLORS["primary"]}; }}
+QLabel#card_value[level="brand"] {{ color: {COLORS["brand"]}; }}
+QLabel#card_value[level="error"] {{ color: {COLORS["error"]}; }}
+QLabel#card_value[level="success"] {{ color: {COLORS["success"]}; }}
+QLabel#card_value[level="warning"] {{ color: {COLORS["warning"]}; }}
 """
