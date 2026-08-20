@@ -14,7 +14,7 @@ class Archivo(Nombre, Extension):
     _fecha_modificacion: datetime = field(default_factory=lambda: datetime.now(UTC))
     _es_oculto: bool = False
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Inicializar Nombre y Extension desde la ruta si no se proporcionaron
         if not self._nombre:
             self._nombre = self._ruta_completa.stem

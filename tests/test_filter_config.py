@@ -6,7 +6,8 @@ from zorma.core.models.configuracion_filtro import ConfiguracionFiltro
 class TestFilterConfig:
     """
     Clase de pruebas para `ConfiguracionFiltro`.
-    Verifica que las reglas de filtrado de archivos (extensiones, tamaños, archivos ocultos, directorios excluidos) se apliquen correctamente para determinar si un archivo debe ser procesado.
+    Verifica que las reglas de filtrado (extensiones, tamaños, ocultos, directorios excluidos)
+    se apliquen correctamente para determinar si un archivo debe ser procesado.
     """
 
     def test_no_filter_passes(self, tmp_path: Path) -> None:

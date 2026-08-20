@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -22,8 +23,11 @@ from ...core.services.servicio_clasificacion import ServicioClasificacion
 from ..shared.aviso import mostrar_aviso
 from ..shared.dialogo_vista_previa import DialogoVistaPrevia
 from ..shared.styles import COLORS, SPACING
-from ..shared.widgets import ListaLineaTiempo, Tarjeta, WidgetBienvenida
+from ..shared.widgets import ListaLineaTiempo, Tarjeta, WidgetBienvenida, refrescar_estilo
 from .inicio_viewmodel import InicioViewModel
+
+if TYPE_CHECKING:
+    from ...core.models.resultado_clasificacion import ResultadoClasificacion
 
 
 class VistaInicio(QWidget):
@@ -41,7 +45,7 @@ class VistaInicio(QWidget):
         data_dir_resolved = data_dir or Path.home() / ".zorma"
         self._vm = InicioViewModel(data_dir_resolved, repo, gestor_deshacer)
         self._watcher_service: ServicioClasificacion | None = None
-        self._scan_pending_results: list = []
+        self._scan_pending_results: list[ResultadoClasificacion] = []
         self._configurar_ui()
         self._conectar_vm()
         self._aplicar_estado_vm()
@@ -267,8 +271,7 @@ class VistaInicio(QWidget):
 
             self._status_label.setText(text)
             self._status_label.setProperty("level", level)
-            self._status_label.style().unpolish(self._status_label)
-            self._status_label.style().polish(self._status_label)
+            refrescar_estilo(self._status_label)
             self._status_label.show()
         else:
             self._status_label.hide()
@@ -285,7 +288,7 @@ class VistaInicio(QWidget):
     def _al_mostrar_toast_vm(self, message: str, color: str) -> None:
         mostrar_aviso(message, color)
 
-    def _al_resultados_escaneo_preview(self, results: list) -> None:
+    def _al_resultados_escaneo_preview(self, results: list[ResultadoClasificacion]) -> None:
         self._scan_pending_results = results
         watch_path = self._vm.obtener_ruta_vigilancia()
         if watch_path is None:
@@ -392,5 +395,4 @@ class VistaInicio(QWidget):
                 self._action_btn.setEnabled(True)
                 self._action_btn.setProperty("state", "active")
 
-        self._action_btn.style().unpolish(self._action_btn)
-        self._action_btn.style().polish(self._action_btn)
+        refrescar_estilo(self._action_btn)

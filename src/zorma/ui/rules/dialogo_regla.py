@@ -114,7 +114,9 @@ class DialogoRegla(QDialog):
         folder_row.addWidget(browse_btn)
         form.addRow("Carpeta destino:", folder_row)
 
-        self._target_hint = QLabel("Usa {ext} para crear carpetas automáticas por extensión, ej. C:\\Documentos\\{ext} → Documentos\\.txt")
+        self._target_hint = QLabel(
+            "Usa {ext} para crear carpetas automáticas por extensión, ej. C:\\Documentos\\{ext} → Documentos\\.txt"
+        )
         self._target_hint.setObjectName("hint_label")
         form.addRow("", self._target_hint)
 
