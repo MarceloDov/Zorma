@@ -43,10 +43,10 @@ class Regla:
             return False
         try:
             evaluadores = {
-                TipoCondicion.EXTENSION: self._eval_extension,
-                TipoCondicion.TAMANIO: self._eval_size,
-                TipoCondicion.FECHA: self._eval_date,
-                TipoCondicion.NOMBRE: self._eval_name,
+                TipoCondicion.EXTENSION: self._evaluar_extension,
+                TipoCondicion.TAMANIO: self._evaluar_tamanio,
+                TipoCondicion.FECHA: self._evaluar_fecha,
+                TipoCondicion.NOMBRE: self._evaluar_nombre,
             }
             fn = evaluadores.get(self.tipo_condicion)
             if fn is None:
@@ -59,7 +59,7 @@ class Regla:
     def obtener_descripcion(self) -> str:
         return f"{self.nombre} ({self.tipo_condicion.value}: {self.valor_condicion})"
 
-    def _eval_extension(self, file: Path) -> bool:
+    def _evaluar_extension(self, file: Path) -> bool:
         value = self.valor_condicion
         exts = [e.strip().lower().lstrip(".") for e in value.split(",")]
         if self.MATCH_ALL_EXTENSIONS in exts:
@@ -70,7 +70,7 @@ class Regla:
         file_ext = file.suffix.lower().lstrip(".")
         return file_ext in exts
 
-    def _eval_size(self, file: Path) -> bool:
+    def _evaluar_tamanio(self, file: Path) -> bool:
         value = self.valor_condicion
         match = self._SIZE_RE.match(value.strip())
         if not match:
@@ -92,7 +92,7 @@ class Regla:
             return False
         return fn(file_size, threshold)
 
-    def _eval_date(self, file: Path) -> bool:
+    def _evaluar_fecha(self, file: Path) -> bool:
         value = self.valor_condicion
         match = self._DATE_RE.match(value.strip())
         if not match:
@@ -128,7 +128,7 @@ class Regla:
             return False
         return fn(file_mtime, cutoff)
 
-    def _eval_name(self, file: Path) -> bool:
+    def _evaluar_nombre(self, file: Path) -> bool:
         value = self.valor_condicion
         name = file.stem
         if "*" in value or "?" in value:

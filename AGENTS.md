@@ -47,7 +47,7 @@ uv run pyinstaller --noconfirm zorma.spec
 - Fechas: siempre `datetime.now(UTC)` (de `datetime import UTC`), nunca `timezone.utc`.
 - Línea máx. 120 caracteres (`ruff: line-length = 120`).
 - mypy strict en todo `src/`, con una excepción documentada: `ui.shared.toast` tiene `ignore_errors = true` en `pyproject.toml` — no es objetivo a "arreglar", es deliberado.
-- `logging.getLogger(__name__)` en `core/`/`adapters/`. `ui/` no loguea — feedback al usuario va por `show_toast()` (`ui/shared/toast.py`). Nunca `print`.
+- `logging.getLogger(__name__)` en `core/`/`adapters/`. `ui/` no loguea — feedback al usuario va por `mostrar_aviso()` (`ui/shared/aviso.py`). Nunca `print`.
 
 ```python
 @dataclass
@@ -100,4 +100,4 @@ Conventional Commits (`feat:`, `fix:`, `test:`, `refactor:`) con descripción en
 - Agregar una dependencia nueva a `pyproject.toml` sin que se haya pedido.
 
 ## 11. Mantenimiento
-Tratar como código: corto, y crece solo cuando un agente falla repetido en algo concreto. Contexto del refactor a nombres en español (ya completado, fases 1-3) y la próxima fase (split SOLID de `DashboardViewModel`, ports/`Protocol`) está en `docs/plan-refactor-solid.md` — leerlo antes de tocar `core/services/` o `ui/dashboard/` en algo estructural.
+Tratar como código: corto, y crece solo cuando un agente falla repetido en algo concreto. Contexto del refactor a nombres en español (ya completado: métodos, clases y archivos) y la próxima fase (split SOLID de `InicioViewModel`, ports/`Protocol`) está en `docs/plan-refactor-solid.md` — leerlo antes de tocar `core/services/` o `ui/dashboard/` en algo estructural.

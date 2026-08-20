@@ -6,8 +6,8 @@ from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBo
 from .styles import BORDER_RADIUS, COLORS, FONT_SIZES
 
 
-class Toast(QWidget):
-    _active_toasts: list[Toast] = []
+class AvisoEmergente(QWidget):
+    _avisos_activos: list[AvisoEmergente] = []
 
     def __init__(self, parent: QWidget, text: str, color: str, duration: int = 3000) -> None:
         super().__init__(parent)
@@ -75,14 +75,14 @@ class Toast(QWidget):
         pw = parent.width()
         tw = self.width()
         gap = 8
-        parent_toasts = [t for t in Toast._active_toasts if t._parent_widget == parent]
-        offset_y = 20 + sum(t.height() + gap for t in parent_toasts)
+        avisos_padre = [t for t in AvisoEmergente._avisos_activos if t._parent_widget == parent]
+        offset_y = 20 + sum(t.height() + gap for t in avisos_padre)
 
         self._start_x = pw - tw - 20
         self._start_y = offset_y
 
         self.move(self._start_x + 60, self._start_y)
-        Toast._active_toasts.append(self)
+        AvisoEmergente._avisos_activos.append(self)
         self._animar_entrada()
 
         self._timer = QTimer(self)
@@ -120,15 +120,15 @@ class Toast(QWidget):
 
     def _limpiar(self) -> None:
         self.hide()
-        if self in Toast._active_toasts:
-            Toast._active_toasts.remove(self)
-        Toast._reposicionar_todo(self._parent_widget)
+        if self in AvisoEmergente._avisos_activos:
+            AvisoEmergente._avisos_activos.remove(self)
+        AvisoEmergente._reposicionar_todo(self._parent_widget)
 
     @staticmethod
     def _reposicionar_todo(parent: QWidget) -> None:
         gap = 8
         y = 20
-        for t in Toast._active_toasts:
+        for t in AvisoEmergente._avisos_activos:
             if t._parent_widget != parent:
                 continue
             target = QPoint(t._start_x, y)
@@ -141,16 +141,16 @@ class Toast(QWidget):
             y += t.height() + gap
 
     def closeEvent(self, event: object) -> None:
-        if self in Toast._active_toasts:
-            Toast._active_toasts.remove(self)
+        if self in AvisoEmergente._avisos_activos:
+            AvisoEmergente._avisos_activos.remove(self)
         super().closeEvent(event)  # type: ignore[arg-type]
 
 
-def mostrar_toast(text: str, color: str = COLORS["success"], duration: int = 3000) -> None:
+def mostrar_aviso(text: str, color: str = COLORS["success"], duration: int = 3000) -> None:
     parent: QWidget | None = None
     for w in QApplication.topLevelWidgets():
         if w.isVisible():
             parent = w
             break
     if parent is not None:
-        Toast(parent, text, color, duration)
+        AvisoEmergente(parent, text, color, duration)
