@@ -36,7 +36,7 @@ jobs:
         run: Compress-Archive -Path dist/zorma/* -DestinationPath zorma-${{ github.ref_name }}-windows.zip
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: zorma-${{ github.ref_name }}-windows.zip
           generate_release_notes: true
