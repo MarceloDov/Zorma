@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -18,10 +17,10 @@ from PyQt6.QtWidgets import (
 )
 
 from ...adapters.persistence.zorma_repository import ZormaRepository
-from ...core.services.undo_manager import UndoManager
-from ...core.services.watcher_service import WatcherService
+from ...core.services.gestor_deshacer import GestorDeshacer
+from ...core.services.servicio_clasificacion import ServicioClasificacion
 from ..shared.preview_dialog import PreviewDialog
-from ..shared.styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, btn_error, btn_secondary
+from ..shared.styles import COLORS, SPACING
 from ..shared.toast import show_toast
 from ..shared.widgets import Card, OnboardingWidget, TimelineFeed
 from .dashboard_viewmodel import DashboardViewModel
@@ -30,23 +29,24 @@ from .dashboard_viewmodel import DashboardViewModel
 class DashboardView(QWidget):
     watcher_status_changed = pyqtSignal(str, str)
     folder_selected = pyqtSignal(Path)
+    navigate_requested = pyqtSignal(int)
 
     def __init__(
         self,
-        data_dir: Optional[Path] = None,
-        repo: Optional[ZormaRepository] = None,
-        undo_manager: Optional[UndoManager] = None,
+        data_dir: Path | None = None,
+        repo: ZormaRepository | None = None,
+        gestor_deshacer: GestorDeshacer | None = None,
     ) -> None:
         super().__init__()
         data_dir_resolved = data_dir or Path.home() / ".zorma"
-        self._vm = DashboardViewModel(data_dir_resolved, repo, undo_manager)
-        self._watcher_service: Optional[WatcherService] = None
+        self._vm = DashboardViewModel(data_dir_resolved, repo, gestor_deshacer)
+        self._watcher_service: ServicioClasificacion | None = None
         self._scan_pending_results: list = []
         self._setup_ui()
         self._connect_vm()
         self._apply_vm_state()
 
-    def set_watcher_service(self, service: WatcherService) -> None:
+    def set_watcher_service(self, service: ServicioClasificacion) -> None:
         self._watcher_service = service
         self._vm.set_watcher_service(service)
 
@@ -62,6 +62,7 @@ class DashboardView(QWidget):
 
         self._onboarding = OnboardingWidget()
         self._onboarding.folder_requested.connect(self._pick_folder)
+        self._onboarding.rules_requested.connect(lambda: self.navigate_requested.emit(1))
         self._onboarding.start_requested.connect(self._on_action_clicked)
         layout.addWidget(self._onboarding)
 
@@ -228,7 +229,7 @@ class DashboardView(QWidget):
         self._card_errors.update_value(str(errors))
 
     def _on_undo_redo_changed(self, can_undo: bool, can_redo: bool) -> None:
-        if self._vm._undo_manager is None:
+        if self._vm._gestor_deshacer is None:
             self._undo_btn.setVisible(False)
             self._redo_btn.setVisible(False)
             return
@@ -257,10 +258,13 @@ class DashboardView(QWidget):
         if text:
             # Mapear colores a niveles dinámicos
             level = "primary"
-            if color == COLORS["error"]: level = "error"
-            elif color == COLORS["success"]: level = "success"
-            elif color == COLORS["warning"]: level = "warning"
-            
+            if color == COLORS["error"]:
+                level = "error"
+            elif color == COLORS["success"]:
+                level = "success"
+            elif color == COLORS["warning"]:
+                level = "warning"
+
             self._status_label.setText(text)
             self._status_label.setProperty("level", level)
             self._status_label.style().unpolish(self._status_label)
@@ -270,8 +274,8 @@ class DashboardView(QWidget):
             self._status_label.hide()
 
     def _on_vm_result_added(self, result: object) -> None:
-        from ...core.models.classification import ClassificationResult
-        if isinstance(result, ClassificationResult):
+        from ...core.models.resultado_clasificacion import ResultadoClasificacion
+        if isinstance(result, ResultadoClasificacion):
             can_undo = self._vm.can_undo()
             self._timeline.add_result(result, can_undo)
 
@@ -319,13 +323,13 @@ class DashboardView(QWidget):
             self._vm.run_scan()
 
     def _on_undo_file(self, result: object) -> None:
-        from ...core.models.classification import ClassificationResult
-        if not isinstance(result, ClassificationResult):
+        from ...core.models.resultado_clasificacion import ResultadoClasificacion
+        if not isinstance(result, ResultadoClasificacion):
             return
         reply = QMessageBox.question(
             self,
             "Confirmar deshacer",
-            f"¿Revertir el movimiento de '{result.file_name}'?",
+            f"¿Revertir el movimiento de '{result.nombre_archivo}'?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -372,7 +376,7 @@ class DashboardView(QWidget):
             self._action_btn.setText("⟳ Clasificando...")
             self._action_btn.setEnabled(False)
             self._action_btn.setProperty("state", "inactive")
-        
+
         else:
             watch_path = self._vm.get_watch_path()
             if watch_path is None:
@@ -387,6 +391,6 @@ class DashboardView(QWidget):
                 self._action_btn.setText("⚡ Clasificar contenido actual")
                 self._action_btn.setEnabled(True)
                 self._action_btn.setProperty("state", "active")
-        
+
         self._action_btn.style().unpolish(self._action_btn)
         self._action_btn.style().polish(self._action_btn)

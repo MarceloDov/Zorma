@@ -48,7 +48,3 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "zorma.ui.shared.toast"
 ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = "zorma.ui.files.files_view"
-ignore_errors = true

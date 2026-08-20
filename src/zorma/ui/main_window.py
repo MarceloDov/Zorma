@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from PyQt6.QtCore import QPropertyAnimation, Qt
 from PyQt6.QtGui import QAction, QCloseEvent, QIcon, QKeySequence, QShortcut
@@ -23,8 +22,8 @@ from PyQt6.QtWidgets import (
 from ..adapters.notifications.pyqt_notification_adapter import PyQtNotificationAdapter
 from ..adapters.persistence.zorma_repository import ZormaRepository
 from ..config.settings import APP_NAME, ICONS_DIR
-from ..core.services.undo_manager import UndoManager
-from ..core.services.watcher_service import WatcherService
+from ..core.services.gestor_deshacer import GestorDeshacer
+from ..core.services.servicio_clasificacion import ServicioClasificacion
 from .dashboard.dashboard_view import DashboardView
 from .history.history_view import HistoryView
 from .rules.rules_view import RulesView
@@ -37,22 +36,22 @@ from .shared.widgets import SidebarButton
 class MainWindow(QMainWindow):
     def __init__(
         self,
-        data_dir: Optional[Path] = None,
-        watcher_service: Optional[WatcherService] = None,
-        rule_repository: Optional[ZormaRepository] = None,
-        undo_manager: Optional[UndoManager] = None,
+        data_dir: Path | None = None,
+        watcher_service: ServicioClasificacion | None = None,
+        rule_repository: ZormaRepository | None = None,
+        gestor_deshacer: GestorDeshacer | None = None,
     ) -> None:
         super().__init__()
         self._data_dir = data_dir or Path.home() / ".zorma"
         self._watcher_service = watcher_service
         self._rule_repository = rule_repository
-        self._undo_manager = undo_manager
-        self._status_label: Optional[QLabel] = None
-        self._tray_icon: Optional[QSystemTrayIcon] = None
-        self._dashboard_view: Optional[DashboardView] = None
-        self._settings_view: Optional[SettingsView] = None
-        self._theme_btn: Optional[QPushButton] = None
-        self._nav_anim: Optional[QPropertyAnimation] = None
+        self._gestor_deshacer = gestor_deshacer
+        self._status_label: QLabel | None = None
+        self._tray_icon: QSystemTrayIcon | None = None
+        self._dashboard_view: DashboardView | None = None
+        self._settings_view: SettingsView | None = None
+        self._theme_btn: QPushButton | None = None
+        self._nav_anim: QPropertyAnimation | None = None
 
         self._theme = self._rule_repository.get_theme() if self._rule_repository else "dark"
         if self._theme == "light":
@@ -141,15 +140,14 @@ class MainWindow(QMainWindow):
     def _init_views(self) -> None:
         self._rules_view = RulesView(self._data_dir, self._rule_repository)
 
-        self._dashboard_view = DashboardView(
-            self._data_dir, self._rule_repository, self._undo_manager
-        )
+        self._dashboard_view = DashboardView(self._data_dir, self._rule_repository, self._gestor_deshacer)
         if self._watcher_service is not None:
             self._dashboard_view.set_watcher_service(self._watcher_service)
         self._dashboard_view.watcher_status_changed.connect(self._on_watcher_status)
+        self._dashboard_view.navigate_requested.connect(self._navigate)
 
         self._settings_view = SettingsView(self._data_dir)
-        self._history_view = HistoryView(self._data_dir)
+        self._history_view = HistoryView(self._data_dir, self._rule_repository)
 
     def _build_content(self) -> QFrame:
         content = QFrame()
@@ -179,7 +177,7 @@ class MainWindow(QMainWindow):
         return content
 
     def _setup_shortcuts(self) -> None:
-        if self._undo_manager is not None:
+        if self._gestor_deshacer is not None:
             QShortcut(QKeySequence.StandardKey.Undo, self, self._undo_shortcut)
             QShortcut(QKeySequence.StandardKey.Redo, self, self._redo_shortcut)
 
@@ -188,17 +186,17 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("F5"), self, self._refresh_shortcut)
 
         for i in range(4):
-            QShortcut(QKeySequence(f"Ctrl+{i+1}"), self, lambda checked, idx=i: self._navigate(idx))
+            QShortcut(QKeySequence(f"Ctrl+{i + 1}"), self, lambda checked, idx=i: self._navigate(idx))
 
     def _undo_shortcut(self) -> None:
-        if self._undo_manager is not None:
-            result = self._undo_manager.undo()
+        if self._gestor_deshacer is not None:
+            result = self._gestor_deshacer.undo()
             if result is not None:
                 show_toast("↩ Archivo restaurado exitosamente", COLORS["success"])
 
     def _redo_shortcut(self) -> None:
-        if self._undo_manager is not None:
-            result = self._undo_manager.redo()
+        if self._gestor_deshacer is not None:
+            result = self._gestor_deshacer.redo()
             if result is not None:
                 show_toast("↪ Archivo reclasificado exitosamente", COLORS["success"])
 
@@ -284,7 +282,7 @@ class MainWindow(QMainWindow):
             widget.setGraphicsEffect(effect)
 
             self._nav_stack.setCurrentIndex(index)
-            
+
             # Ensure the widget is active and visible
             widget.show()
             widget.raise_()
@@ -309,17 +307,16 @@ class MainWindow(QMainWindow):
         new = "light" if self._theme == "dark" else "dark"
         self._theme = new
         set_theme(new)
-        
+
         # Actualización global: volvemos a aplicar QSS
         app = QApplication.instance()
         if app is not None:
             app.setStyleSheet(build_qss())
-            
+
         if self._rule_repository:
             self._rule_repository.set_theme(new)
         self._on_theme_changed(new)
-        
+
         # Refrescar UI si es necesario (ej. pollish)
         self.style().unpolish(self)
         self.style().polish(self)
-

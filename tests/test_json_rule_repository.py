@@ -1,23 +1,28 @@
 from pathlib import Path
 
 from zorma.adapters.persistence.zorma_repository import ZormaRepository
-from zorma.core.models.rule import ActionType, ConditionType, Rule, RuleAction, RuleGroup
+from zorma.core.models.accion_regla import AccionRegla
+from zorma.core.models.enums import EstadoClasificacion, TipoAccion, TipoCondicion
+from zorma.core.models.grupo_regla import GrupoRegla
+from zorma.core.models.pila_deshacer import PilaDeshacer
+from zorma.core.models.regla import Regla
+from zorma.core.models.resultado_clasificacion import ResultadoClasificacion
 
 
 class TestZormaRepository:
     def test_save_and_get_rule(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
-        rule = Rule(name="Test", condition_type=ConditionType.EXTENSION, condition_value=".txt")
+        rule = Regla(nombre="Test", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
         repo.save_rule(rule)
         retrieved = repo.get_rule_by_id(rule.id)
         assert retrieved is not None
-        assert retrieved.name == "Test"
-        assert retrieved.condition_type == ConditionType.EXTENSION
+        assert retrieved.nombre == "Test"
+        assert retrieved.tipo_condicion == TipoCondicion.EXTENSION
 
     def test_get_all_rules(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
-        repo.save_rule(Rule(name="R1", condition_type=ConditionType.EXTENSION, condition_value=".txt"))
-        repo.save_rule(Rule(name="R2", condition_type=ConditionType.SIZE, condition_value=">10 MB"))
+        repo.save_rule(Regla(nombre="R1", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt"))
+        repo.save_rule(Regla(nombre="R2", tipo_condicion=TipoCondicion.TAMANIO, valor_condicion=">10 MB"))
         rules = repo.get_all_rules()
         assert len(rules) == 2
 
@@ -27,7 +32,7 @@ class TestZormaRepository:
 
     def test_delete_rule(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
-        rule = Rule(name="ToDelete", condition_type=ConditionType.EXTENSION, condition_value=".tmp")
+        rule = Regla(nombre="ToDelete", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".tmp")
         repo.save_rule(rule)
         assert repo.get_rule_by_id(rule.id) is not None
         repo.delete_rule(rule.id)
@@ -35,44 +40,44 @@ class TestZormaRepository:
 
     def test_save_and_get_group(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
-        group = RuleGroup(name="Test Group", priority=1)
+        group = GrupoRegla(nombre="Test Group", prioridad=1)
         repo.save_group(group)
         groups = repo.get_groups()
         assert len(groups) == 1
-        assert groups[0].name == "Test Group"
+        assert groups[0].nombre == "Test Group"
 
     def test_get_rules_by_group(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
-        group = RuleGroup(name="G1")
+        group = GrupoRegla(nombre="G1")
         repo.save_group(group)
-        r1 = Rule(name="R1", group_id=group.id, condition_type=ConditionType.EXTENSION, condition_value=".txt")
-        r2 = Rule(name="R2", group_id="other", condition_type=ConditionType.EXTENSION, condition_value=".pdf")
+        r1 = Regla(nombre="R1", id_grupo=group.id, tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
+        r2 = Regla(nombre="R2", id_grupo="other", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".pdf")
         repo.save_rule(r1)
         repo.save_rule(r2)
         rules = repo.get_rules_by_group(group.id)
         assert len(rules) == 1
-        assert rules[0].name == "R1"
+        assert rules[0].nombre == "R1"
 
     def test_save_and_get_action(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
-        rule = Rule(name="Test", condition_type=ConditionType.EXTENSION, condition_value=".txt")
+        rule = Regla(nombre="Test", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".txt")
         repo.save_rule(rule)
-        action = RuleAction(rule_id=rule.id, action_type=ActionType.MOVE, target_folder="/tmp/dest")
+        action = AccionRegla(id_regla=rule.id, tipo_accion=TipoAccion.MOVER, carpeta_destino="/tmp/dest")
         repo.save_action(action)
         actions = repo.get_actions_for_rule(rule.id)
         assert len(actions) == 1
-        assert actions[0].action_type == ActionType.MOVE
-        assert actions[0].target_folder == "/tmp/dest"
+        assert actions[0].tipo_accion == TipoAccion.MOVER
+        assert actions[0].carpeta_destino == "/tmp/dest"
 
     def test_persistence_across_instances(self, tmp_path: Path) -> None:
         repo1 = ZormaRepository(tmp_path)
-        rule = Rule(name="Persistent", condition_type=ConditionType.EXTENSION, condition_value=".csv")
+        rule = Regla(nombre="Persistent", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".csv")
         repo1.save_rule(rule)
 
         repo2 = ZormaRepository(tmp_path)
         retrieved = repo2.get_rule_by_id(rule.id)
         assert retrieved is not None
-        assert retrieved.name == "Persistent"
+        assert retrieved.nombre == "Persistent"
 
     def test_create_default_rules(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
@@ -80,11 +85,11 @@ class TestZormaRepository:
         repo.create_default_rules()
         groups = repo.get_groups()
         assert len(groups) == 1
-        assert groups[0].is_default is True
+        assert groups[0].es_predeterminado is True
         rules = repo.get_all_rules()
         assert len(rules) == 1
         for rule in rules:
-            assert rule.condition_type == ConditionType.EXTENSION
+            assert rule.tipo_condicion == TipoCondicion.EXTENSION
 
     def test_create_default_rules_use_ext_template(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
@@ -92,10 +97,10 @@ class TestZormaRepository:
         rules = repo.get_all_rules()
         assert len(rules) == 1
         rule = rules[0]
-        assert rule.condition_value == "*"
+        assert rule.valor_condicion == "*"
         actions = repo.get_actions_for_rule(rule.id)
         assert len(actions) == 1
-        assert "{ext}" in actions[0].target_folder
+        assert "{ext}" in actions[0].carpeta_destino
 
     def test_delete_group_cascades(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
@@ -115,25 +120,23 @@ class TestZormaRepository:
 
     def test_undo_redo(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path, undo_limit=3)
-        from zorma.core.models.undo_entry import UndoEntry
-        e1 = UndoEntry(file_name="a.txt")
-        e2 = UndoEntry(file_name="b.txt")
+        e1 = PilaDeshacer()
+        e2 = PilaDeshacer()
         repo.undo_push(e1)
         repo.undo_push(e2)
         assert repo.undo_size() == 2
-        assert repo.undo_peek().file_name == "b.txt"
+        assert repo.undo_peek().id == e2.id
         popped = repo.undo_pop()
-        assert popped.file_name == "b.txt"
+        assert popped.id == e2.id
         assert repo.undo_size() == 1
         repo.redo_push(e2)
         assert repo.redo_size() == 1
-        assert repo.redo_pop().file_name == "b.txt"
+        assert repo.redo_pop().id == e2.id
 
     def test_history(self, tmp_path: Path) -> None:
         repo = ZormaRepository(tmp_path)
-        from zorma.core.models.classification import ClassificationResult, ClassificationStatus
-        r = ClassificationResult(file_name="f.txt", status=ClassificationStatus.SUCCESS)
+        r = ResultadoClasificacion(nombre_archivo="f.txt", estado=EstadoClasificacion.EXITO)
         repo.add_history(r)
         entries = repo.get_history()
         assert len(entries) == 1
-        assert entries[0].file_name == "f.txt"
+        assert entries[0].nombre_archivo == "f.txt"

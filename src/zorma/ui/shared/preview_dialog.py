@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
@@ -19,8 +18,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ...core.models.classification import ClassificationResult, ClassificationStatus
-from ..shared.styles import COLORS, FONT_SIZES, SPACING, btn_primary, btn_secondary, btn_small
+from ...core.models.enums import EstadoClasificacion
+from ...core.models.resultado_clasificacion import ResultadoClasificacion
+from ..shared.styles import COLORS, SPACING
 
 
 def _format_size(size_bytes: int) -> str:
@@ -36,15 +36,15 @@ def _format_size(size_bytes: int) -> str:
 class PreviewDialog(QDialog):
     def __init__(
         self,
-        results: List[ClassificationResult],
+        results: list[ResultadoClasificacion],
         watch_path: Path,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._results = results
         self._watch_path = watch_path
-        self._row_checks: List[QCheckBox] = []
-        self._row_combos: List[Optional[QComboBox]] = []
+        self._row_checks: list[QCheckBox] = []
+        self._row_combos: list[QComboBox | None] = []
         self.setWindowTitle("Vista Previa — Modo Activo")
         self.setMinimumSize(950, 600)
         self.setModal(True)
@@ -62,11 +62,11 @@ class PreviewDialog(QDialog):
         matched = sum(
             1
             for r in self._results
-            if r.status in (ClassificationStatus.SUCCESS, ClassificationStatus.CONFLICT)
+            if r.estado in (EstadoClasificacion.EXITO, EstadoClasificacion.CONFLICTO)
         )
-        no_rule = sum(1 for r in self._results if r.status == ClassificationStatus.NO_RULE)
-        conflicts = sum(1 for r in self._results if r.status == ClassificationStatus.CONFLICT)
-        filtered = sum(1 for r in self._results if r.status == ClassificationStatus.FILTERED_OUT)
+        no_rule = sum(1 for r in self._results if r.estado == EstadoClasificacion.SIN_REGLA)
+        conflicts = sum(1 for r in self._results if r.estado == EstadoClasificacion.CONFLICTO)
+        filtered = sum(1 for r in self._results if r.estado == EstadoClasificacion.FILTRADO)
 
         stats_parts = [f"{len(self._results)} archivos encontrados"]
         if matched:
@@ -164,9 +164,9 @@ class PreviewDialog(QDialog):
             self._table.insertRow(row)
 
             cb = QCheckBox()
-            is_actionable = r.status in (
-                ClassificationStatus.SUCCESS,
-                ClassificationStatus.CONFLICT,
+            is_actionable = r.estado in (
+                EstadoClasificacion.EXITO,
+                EstadoClasificacion.CONFLICTO,
             )
             cb.setChecked(is_actionable)
             cb.setStyleSheet("QCheckBox::indicator { width: 16px; height: 16px; }")
@@ -180,28 +180,28 @@ class PreviewDialog(QDialog):
             cb_layout.setContentsMargins(0, 0, 0, 0)
             self._table.setCellWidget(row, 0, cb_widget)
 
-            file_item = QTableWidgetItem(r.file_name)
+            file_item = QTableWidgetItem(r.nombre_archivo)
             self._table.setItem(row, 1, file_item)
 
-            rule_name = r.rule_applied.name if r.rule_applied else "—"
+            rule_name = r.regla_aplicada.nombre if r.regla_aplicada else "—"
             self._table.setItem(row, 2, QTableWidgetItem(rule_name))
 
-            action_text = r.action_applied.action_type.value if r.action_applied else "—"
+            action_text = r.accion_aplicada.tipo_accion.value if r.accion_aplicada else "—"
             self._table.setItem(row, 3, QTableWidgetItem(action_text))
 
-            dest = str(r.destination_path) if r.destination_path else "—"
+            dest = str(r.ruta_destino) if r.ruta_destino else "—"
             self._table.setItem(row, 4, QTableWidgetItem(dest))
 
             try:
-                if r.source_path is not None:
-                    size_str = _format_size(r.source_path.stat().st_size)
+                if r.ruta_origen is not None:
+                    size_str = _format_size(r.ruta_origen.stat().st_size)
                 else:
                     size_str = "—"
             except OSError:
                 size_str = "—"
             self._table.setItem(row, 5, QTableWidgetItem(size_str))
 
-            if r.status == ClassificationStatus.CONFLICT:
+            if r.estado == EstadoClasificacion.CONFLICTO:
                 combo = QComboBox()
                 combo.addItems(["Sobrescribir", "Omitir"])
                 combo.setCurrentIndex(1)
@@ -240,11 +240,11 @@ class PreviewDialog(QDialog):
 
     def _select_matched(self) -> None:
         for i, r in enumerate(self._results):
-            is_actionable = r.status in (
-                ClassificationStatus.SUCCESS,
-                ClassificationStatus.CONFLICT,
+            is_actionable = r.estado in (
+                EstadoClasificacion.EXITO,
+                EstadoClasificacion.CONFLICTO,
             )
-            should_check = r.status != ClassificationStatus.CONFLICT and is_actionable
+            should_check = r.estado != EstadoClasificacion.CONFLICTO and is_actionable
             if self._row_combos[i] is not None:
                 self._row_combos[i].blockSignals(True)
                 self._row_combos[i].setCurrentIndex(0 if should_check else 1)
@@ -255,11 +255,11 @@ class PreviewDialog(QDialog):
         count = sum(1 for cb in self._row_checks if cb.isChecked())
         self._selection_count.setText(f"{count} seleccionados")
 
-    def get_selected_results(self) -> List[ClassificationResult]:
+    def get_selected_results(self) -> list[ResultadoClasificacion]:
         selected = []
         for r, cb, combo in zip(self._results, self._row_checks, self._row_combos):
             if cb.isChecked():
                 if combo is not None:
-                    r.overwrite = combo.currentIndex() == 0
+                    r.sobrescribir = combo.currentIndex() == 0
                 selected.append(r)
         return selected

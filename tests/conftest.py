@@ -1,22 +1,23 @@
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
-from zorma.core.models.rule import ConditionType, Rule
+from zorma.core.models.enums import TipoCondicion
+from zorma.core.models.regla import Regla
 
 
 @pytest.fixture
-def sample_rules() -> list[Rule]:
+def sample_rules() -> list[Regla]:
     return [
-        Rule(name="Videos", condition_type=ConditionType.EXTENSION, condition_value=".mp4,.mkv,.avi"),
-        Rule(name="Música", condition_type=ConditionType.EXTENSION, condition_value=".mp3,.flac,.wav"),
-        Rule(name="Documentos", condition_type=ConditionType.EXTENSION, condition_value=".pdf,.doc,.docx,.txt"),
-        Rule(name="Imágenes", condition_type=ConditionType.EXTENSION, condition_value=".jpg,.jpeg,.png"),
-        Rule(name="Grandes (>100MB)", condition_type=ConditionType.SIZE, condition_value=">100 MB"),
-        Rule(name="Antiguos (>30 days)", condition_type=ConditionType.DATE, condition_value=">30 days"),
-        Rule(name="Recientes (<1 hour)", condition_type=ConditionType.DATE, condition_value="<1 hours"),
-        Rule(name="Contiene 'reporte'", condition_type=ConditionType.NAME, condition_value="reporte"),
+        Regla(nombre="Videos", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".mp4,.mkv,.avi"),
+        Regla(nombre="Música", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".mp3,.flac,.wav"),
+        Regla(nombre="Documentos", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".pdf,.doc,.docx,.txt"),
+        Regla(nombre="Imágenes", tipo_condicion=TipoCondicion.EXTENSION, valor_condicion=".jpg,.jpeg,.png"),
+        Regla(nombre="Grandes (>100MB)", tipo_condicion=TipoCondicion.TAMANIO, valor_condicion=">100 MB"),
+        Regla(nombre="Antiguos (>30 days)", tipo_condicion=TipoCondicion.FECHA, valor_condicion=">30 days"),
+        Regla(nombre="Recientes (<1 hour)", tipo_condicion=TipoCondicion.FECHA, valor_condicion="<1 hours"),
+        Regla(nombre="Contiene 'reporte'", tipo_condicion=TipoCondicion.NOMBRE, valor_condicion="reporte"),
     ]
 
 

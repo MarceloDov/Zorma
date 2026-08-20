@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass
@@ -20,16 +23,13 @@ class FilterConfig:
             self.exclude_extensions = set(self.exclude_extensions)
 
     def matches(self, file_path: Path) -> bool:
-        if not self.include_hidden:
-            if file_path.name.startswith("."):
-                return False
+        if not self.include_hidden and file_path.name.startswith("."):
+            return False
         suffix = file_path.suffix.lower()
-        if self.include_extensions is not None:
-            if suffix not in self.include_extensions:
-                return False
-        if self.exclude_extensions is not None:
-            if suffix in self.exclude_extensions:
-                return False
+        if self.include_extensions is not None and suffix not in self.include_extensions:
+            return False
+        if self.exclude_extensions is not None and suffix in self.exclude_extensions:
+            return False
         if self.min_size is not None or self.max_size is not None:
             try:
                 sz = file_path.stat().st_size
@@ -45,6 +45,4 @@ class FilterConfig:
                 if part.lower() in exclude_dirs_lower:
                     return False
         # ponytail: hardcoded safety filter for Windows system dirs shared by all call sites
-        if any(part.startswith("Archivos ") for part in file_path.parts):
-            return False
-        return True
+        return not any(part.startswith("Archivos ") for part in file_path.parts)

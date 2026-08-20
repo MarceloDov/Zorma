@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Optional
-
 from PyQt6.QtCore import QPoint, QPropertyAnimation, QRect, Qt, QTimer
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
@@ -9,7 +7,7 @@ from .styles import BORDER_RADIUS, COLORS, FONT_SIZES
 
 
 class Toast(QWidget):
-    _active_toasts: List[Toast] = []
+    _active_toasts: list[Toast] = []
 
     def __init__(self, parent: QWidget, text: str, color: str, duration: int = 3000) -> None:
         super().__init__(parent)
@@ -149,7 +147,7 @@ class Toast(QWidget):
 
 
 def show_toast(text: str, color: str = COLORS["success"], duration: int = 3000) -> None:
-    parent: Optional[QWidget] = None
+    parent: QWidget | None = None
     for w in QApplication.topLevelWidgets():
         if w.isVisible():
             parent = w

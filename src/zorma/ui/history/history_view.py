@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -16,18 +14,19 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..shared.styles import COLORS, FONT_SIZES, SPACING, btn_secondary
+from ...adapters.persistence.zorma_repository import ZormaRepository
+from ..shared.styles import SPACING
 from ..shared.widgets import EmptyState
 
 PAGE_SIZE = 100
 
 
 class HistoryView(QWidget):
-    def __init__(self, data_dir: Optional[Path] = None) -> None:
+    def __init__(self, data_dir: Path | None = None, repo: ZormaRepository | None = None) -> None:
         super().__init__()
         self._data_dir = data_dir or Path.home() / ".zorma"
-        self._log_file = self._data_dir / "history.jsonl"
-        self._all_entries: List[Dict[str, Any]] = []
+        self._repo = repo
+        self._all_entries: list[dict] = []
         self._visible_count = 0
         self._setup_ui()
 
@@ -97,27 +96,31 @@ class HistoryView(QWidget):
         self._table.setRowCount(0)
         self._visible_count = 0
 
-        if not self._log_file.exists():
+        if self._repo is None:
+            self._table.hide()
+            self._load_more_btn.hide()
+            self._empty_state.show()
+            return
+
+        results = self._repo.get_history()
+        if not results:
             self._table.hide()
             self._load_more_btn.hide()
             self._empty_state.show()
             return
 
         self._all_entries = []
-        with self._log_file.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        self._all_entries.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        continue
-
-        if not self._all_entries:
-            self._table.hide()
-            self._load_more_btn.hide()
-            self._empty_state.show()
-            return
+        for r in reversed(results):
+            self._all_entries.append({
+                "file_name": r.nombre_archivo,
+                "source_path": str(r.ruta_origen) if r.ruta_origen else "",
+                "destination_path": str(r.ruta_destino) if r.ruta_destino else "",
+                "rule_name": r.regla_aplicada.nombre if r.regla_aplicada else "",
+                "action_applied": r.accion_aplicada.tipo_accion.value if r.accion_aplicada else "",
+                "status": r.estado.value,
+                "error_message": r.mensaje_error,
+                "timestamp": r.marca_tiempo.isoformat(),
+            })
 
         self._table.show()
         self._empty_state.hide()
