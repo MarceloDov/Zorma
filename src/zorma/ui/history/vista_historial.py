@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -26,7 +27,7 @@ class VistaHistorial(QWidget):
         super().__init__()
         self._data_dir = data_dir or Path.home() / ".zorma"
         self._repo = repo
-        self._all_entries: list[dict] = []
+        self._all_entries: list[dict[str, Any]] = []
         self._visible_count = 0
         self._configurar_ui()
 

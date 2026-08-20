@@ -22,7 +22,7 @@ from ...config.settings import DEFAULT_DISK_ALERT_THRESHOLD, DISK_CHECK_INTERVAL
 from ...core.models.enums import UrgenciaNotificacion
 from ..shared.aviso import mostrar_aviso
 from ..shared.styles import COLORS, SPACING
-from ..shared.widgets import Tarjeta
+from ..shared.widgets import Tarjeta, refrescar_estilo
 
 
 class VistaConfiguracion(QWidget):
@@ -159,13 +159,11 @@ class VistaConfiguracion(QWidget):
                 self._alerts_card.actualizar_valor("1")
                 self._no_alerts_label.setText("⚠ Espacio de disco bajo")
                 self._no_alerts_label.setProperty("level", "warning")
-                self._no_alerts_label.style().unpolish(self._no_alerts_label)
-                self._no_alerts_label.style().polish(self._no_alerts_label)
+                refrescar_estilo(self._no_alerts_label)
                 # Note: Tarjeta disk style needs special handling or refactor to use setProperty
                 # Temporarily leave it as is or handle it similarly
                 self._disk_card.setProperty("level", "warning")
-                self._disk_card.style().unpolish(self._disk_card)
-                self._disk_card.style().polish(self._disk_card)
+                refrescar_estilo(self._disk_card)
                 if self._notification_service is not None:
                     drive = getattr(Path.home(), "drive", "system")
                     self._notification_service.notificar(
@@ -177,11 +175,9 @@ class VistaConfiguracion(QWidget):
                 self._alerts_card.actualizar_valor("0")
                 self._no_alerts_label.setText("Sin alertas activas. Su sistema funciona con normalidad.")
                 self._no_alerts_label.setProperty("level", "normal")
-                self._no_alerts_label.style().unpolish(self._no_alerts_label)
-                self._no_alerts_label.style().polish(self._no_alerts_label)
+                refrescar_estilo(self._no_alerts_label)
                 self._disk_card.setProperty("level", "normal")
-                self._disk_card.style().unpolish(self._disk_card)
-                self._disk_card.style().polish(self._disk_card)
+                refrescar_estilo(self._disk_card)
         except OSError:
             self._disk_card.actualizar_valor("Desconocido")
 

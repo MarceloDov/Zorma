@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
@@ -9,6 +10,14 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QScrollAre
 from ...core.models.enums import EstadoClasificacion
 from ...core.models.resultado_clasificacion import ResultadoClasificacion
 from .styles import BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, boton_secundario
+
+
+def refrescar_estilo(widget: QWidget) -> None:
+    """Reaplica el QSS de un widget tras cambiar una property dinámica (ej. level/state/active)."""
+    style = widget.style()
+    if style is not None:
+        style.unpolish(widget)
+        style.polish(widget)
 
 
 class BotonBarraLateral(QPushButton):
@@ -32,8 +41,7 @@ class BotonBarraLateral(QPushButton):
     def establecer_activo(self, active: bool) -> None:
         self.setChecked(active)
         self.setProperty("active", "true" if active else "false")
-        self.style().unpolish(self)
-        self.style().polish(self)
+        refrescar_estilo(self)
 
 
 
@@ -297,7 +305,7 @@ class EstadoVacio(QWidget):
 
             self._button = btn
 
-    def establecer_callback_boton(self, callback: object) -> None:
+    def establecer_callback_boton(self, callback: Callable[[], None]) -> None:
         if hasattr(self, "_button"):
             self._button.clicked.connect(callback)
 

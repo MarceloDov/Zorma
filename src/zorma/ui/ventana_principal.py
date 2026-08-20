@@ -30,7 +30,7 @@ from .rules.vista_reglas import VistaReglas
 from .settings.vista_configuracion import VistaConfiguracion
 from .shared.aviso import mostrar_aviso
 from .shared.styles import COLORS, construir_qss, establecer_tema
-from .shared.widgets import BotonBarraLateral
+from .shared.widgets import BotonBarraLateral, refrescar_estilo
 
 
 class VentanaPrincipal(QMainWindow):
@@ -57,7 +57,7 @@ class VentanaPrincipal(QMainWindow):
         if self._theme == "light":
             establecer_tema("light")
             app = QApplication.instance()
-            if app is not None:
+            if isinstance(app, QApplication):
                 app.setStyleSheet(construir_qss())
 
         self._configurar_ui()
@@ -200,7 +200,7 @@ class VentanaPrincipal(QMainWindow):
 
     def _atajo_refrescar(self) -> None:
         idx = self._nav_stack.currentIndex()
-        if idx == 0:
+        if idx == 0 and self._dashboard_view is not None:
             self._dashboard_view.ejecutar_escaneo()
         elif idx == 1:
             self._rules_view._cargar_reglas()
@@ -297,7 +297,7 @@ class VentanaPrincipal(QMainWindow):
 
         # Actualización global: volvemos a aplicar QSS
         app = QApplication.instance()
-        if app is not None:
+        if isinstance(app, QApplication):
             app.setStyleSheet(construir_qss())
 
         if self._rule_repository:
@@ -306,5 +306,4 @@ class VentanaPrincipal(QMainWindow):
             self._theme_btn.setText("☀" if new == "light" else "☾")
 
         # Refrescar UI si es necesario (ej. pollish)
-        self.style().unpolish(self)
-        self.style().polish(self)
+        refrescar_estilo(self)

@@ -228,10 +228,11 @@ class DialogoVistaPrevia(QDialog):
 
     def _seleccionar_todo(self) -> None:
         for i, cb in enumerate(self._row_checks):
-            if self._row_combos[i] is not None:
-                self._row_combos[i].blockSignals(True)
-                self._row_combos[i].setCurrentIndex(0)
-                self._row_combos[i].blockSignals(False)
+            combo = self._row_combos[i]
+            if combo is not None:
+                combo.blockSignals(True)
+                combo.setCurrentIndex(0)
+                combo.blockSignals(False)
             cb.setChecked(True)
 
     def _deseleccionar_todo(self) -> None:
@@ -245,10 +246,11 @@ class DialogoVistaPrevia(QDialog):
                 EstadoClasificacion.CONFLICTO,
             )
             should_check = r.estado != EstadoClasificacion.CONFLICTO and is_actionable
-            if self._row_combos[i] is not None:
-                self._row_combos[i].blockSignals(True)
-                self._row_combos[i].setCurrentIndex(0 if should_check else 1)
-                self._row_combos[i].blockSignals(False)
+            combo = self._row_combos[i]
+            if combo is not None:
+                combo.blockSignals(True)
+                combo.setCurrentIndex(0 if should_check else 1)
+                combo.blockSignals(False)
             self._row_checks[i].setChecked(is_actionable)
 
     def _actualizar_contador_seleccion(self) -> None:
