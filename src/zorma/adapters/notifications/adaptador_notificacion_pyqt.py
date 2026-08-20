@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QSystemTrayIcon
 from ...core.models.enums import UrgenciaNotificacion
 
 
-class PyQtNotificationAdapter(QObject):
+class AdaptadorNotificacionPyQt(QObject):
     """
     Implementación del servicio de notificaciones utilizando PyQt6 QSystemTrayIcon.
     """

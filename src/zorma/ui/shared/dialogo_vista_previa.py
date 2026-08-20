@@ -23,7 +23,7 @@ from ...core.models.resultado_clasificacion import ResultadoClasificacion
 from ..shared.styles import COLORS, SPACING
 
 
-def _format_size(size_bytes: int) -> str:
+def _formatear_tamanio(size_bytes: int) -> str:
     if size_bytes < 1024:
         return f"{size_bytes} B"
     if size_bytes < 1024**2:
@@ -33,7 +33,7 @@ def _format_size(size_bytes: int) -> str:
     return f"{size_bytes / (1024**3):.1f} GB"
 
 
-class PreviewDialog(QDialog):
+class DialogoVistaPrevia(QDialog):
     def __init__(
         self,
         results: list[ResultadoClasificacion],
@@ -194,7 +194,7 @@ class PreviewDialog(QDialog):
 
             try:
                 if r.ruta_origen is not None:
-                    size_str = _format_size(r.ruta_origen.stat().st_size)
+                    size_str = _formatear_tamanio(r.ruta_origen.stat().st_size)
                 else:
                     size_str = "—"
             except OSError:

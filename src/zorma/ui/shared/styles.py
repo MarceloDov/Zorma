@@ -38,6 +38,7 @@ _DARK_COLORS = {
     "primary": "#89b4fa",
     "primary_hover": "#74c7ec",
     "primary_pressed": "#6a8fd8",
+    "text_on_primary": "#1e1e2e",
     "accent": "#cba6f7",
     "accent_hover": "#b4b0e6",
     "brand": "#fab387",
@@ -68,12 +69,13 @@ _LIGHT_COLORS = {
     "bg": "#D5FDFF",
     "bg2": "#FFFFFF",
     "surface": "#FFFFFF",
-    "sidebar": "#C5FBFF",
+    "sidebar": "#C0F3F7",
     "card": "#FFFFFF",
-    "card_hover": "#D7FBFF",
+    "card_hover": "#CCEBEF",
     "primary": "#06B6D4",
     "primary_hover": "#0BD6F8",
     "primary_pressed": "#058BA2",
+    "text_on_primary": "#001E36",
     "accent": "#004E6F",
     "accent_hover": "#0079AC",
     "brand": "#fe640b",
@@ -85,13 +87,13 @@ _LIGHT_COLORS = {
     "error": "#d20f39",
     "error_hover": "#bc0d32",
     "text": "#001E36",
-    "text_muted": "#7599A5",
+    "text_muted": "#51727D",
     "text_bright": "#001E36",
-    "border": "#36EBFF",
-    "border_light": "#7CF2FF",
-    "border_accent": "#1EA4BE",
-    "scrollbar": "#68F0FF",
-    "scrollbar_hover": "#2BCCE2",
+    "border": "#0099AE",
+    "border_light": "#59BDCA",
+    "border_accent": "#007792",
+    "scrollbar": "#40B2C2",
+    "scrollbar_hover": "#008AA1",
     "glass_bg": "rgba(255, 255, 255, 0.85)",
     "glass_border": "rgba(6, 182, 212, 0.15)",
     "shadow": "rgba(0, 0, 0, 0.1)",
@@ -112,7 +114,7 @@ def boton_primario() -> str:
     return f"""
         QPushButton {{
             background-color: {COLORS["primary"]};
-            color: {COLORS["bg"]};
+            color: {COLORS["text_on_primary"]};
             border: none;
             border-radius: {BORDER_RADIUS["sm"]};
             padding: 10px 22px;
@@ -225,7 +227,7 @@ QLineEdit, QComboBox, QSpinBox {{
     padding: 10px 12px;
     font-size: {FONT_SIZES["base"]};
     selection-background-color: {COLORS["primary"]};
-    selection-color: {COLORS["bg"]};
+    selection-color: {COLORS["text_on_primary"]};
 }}
 QLineEdit:hover, QComboBox:hover, QSpinBox:hover {{
     border-color: {COLORS["border_light"]};
@@ -253,7 +255,7 @@ QComboBox QAbstractItemView {{
     background-color: {COLORS["bg2"]};
     color: {COLORS["text"]};
     selection-background-color: {COLORS["primary"]};
-    selection-color: {COLORS["bg"]};
+    selection-color: {COLORS["text_on_primary"]};
     border: 1px solid {COLORS["border"]};
     border-radius: {BORDER_RADIUS["sm"]};
     outline: none;
@@ -388,7 +390,7 @@ QTableWidget {{
     border-radius: {BORDER_RADIUS["md"]};
     gridline-color: {COLORS["border"]};
     selection-background-color: {COLORS["primary"]};
-    selection-color: {COLORS["bg"]};
+    selection-color: {COLORS["text_on_primary"]};
 }}
 QTableWidget::item {{
     padding: 10px 12px;
@@ -520,7 +522,7 @@ QPushButton#action_btn[state="monitoring"] {{
 }}
 QPushButton#action_btn[state="active"] {{
     background-color: {COLORS["brand"]};
-    color: {COLORS["bg"]};
+    color: {COLORS["text_on_primary"]};
     border: none;
     font-weight: 700;
 }}
@@ -531,7 +533,7 @@ QPushButton#action_btn[state="active"]:hover {{
 /* Clases de botones */
 QPushButton[class="primary"] {{
     background-color: {COLORS["primary"]};
-    color: {COLORS["bg"]};
+    color: {COLORS["text_on_primary"]};
     border: none;
     border-radius: {BORDER_RADIUS["sm"]};
     padding: 10px 22px;
@@ -673,7 +675,7 @@ QLabel#preview_warning {{
     font-weight: 600;
 }}
 
-/* Reglas para RuleDialog */
+/* Reglas para DialogoRegla */
 QLabel#rule_header {{
     color: {COLORS["text_bright"]};
     font-size: 20px;
@@ -711,7 +713,7 @@ QPushButton#browse_btn:hover {{
     background-color: {COLORS["card_hover"]};
 }}
 
-/* Reglas para SidebarButton */
+/* Reglas para BotonBarraLateral */
 QPushButton#sidebar_btn {{
     background-color: transparent;
     color: {COLORS["text_muted"]};
@@ -728,11 +730,11 @@ QPushButton#sidebar_btn:hover {{
 }}
 QPushButton#sidebar_btn[active="true"] {{
     background-color: {COLORS["primary"]};
-    color: {COLORS["bg"]};
+    color: {COLORS["text_on_primary"]};
     font-weight: 700;
 }}
 
-/* Reglas para Card */
+/* Reglas para Tarjeta */
 QLabel#card_title {{
     color: {COLORS["text_muted"]};
     font-size: {FONT_SIZES["xs"]};

@@ -58,7 +58,7 @@
 
 ### Tests
 
-- [x] 156/162 pasan (6 fallos preexistentes en watchdog/watcher)
+- [x] 160/160 pasan
 
 ---
 
@@ -70,5 +70,5 @@
 - [ ] **Fase 4**: Acciones en `core/actions.py` (1 archivo, dict, OCP)
 - [ ] **Fase 5**: Extraer `ClassificationEngine` de `ServicioClasificacion` (SRP)
 - [ ] **Fase 6**: `GestorDeshacer` usa `UndoRedoStore` (DIP)
-- [ ] **Fase 7**: Partir `DashboardViewModel` → `AppSettingsManager` + `WorkersManager` + VM slim (SRP)
+- [ ] **Fase 7**: Partir `InicioViewModel` → `AppSettingsManager` + `WorkersManager` + VM slim (SRP)
 - [ ] **Fase 8**: Tests con mocks + cleanup CI (ruff, mypy, pytest)

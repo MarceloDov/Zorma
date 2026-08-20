@@ -46,7 +46,7 @@ strict = true
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "zorma.ui.shared.toast"
+module = "zorma.ui.shared.aviso"
 ignore_errors = true
 
 [dependency-groups]

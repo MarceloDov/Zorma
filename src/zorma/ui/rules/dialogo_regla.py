@@ -36,7 +36,7 @@ ACTION_LABELS = {
 }
 
 
-class RuleDialog(QDialog):
+class DialogoRegla(QDialog):
     def __init__(
         self,
         parent: QWidget | None = None,

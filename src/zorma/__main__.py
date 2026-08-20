@@ -6,12 +6,12 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 from .adapters.persistence.zorma_repository import ZormaRepository
-from .adapters.watcher.watchdog_watcher import WatchdogFileWatcher
+from .adapters.watcher.vigilante_watchdog import VigilanteArchivosWatchdog
 from .config.settings import APP_NAME, DATA_DIR, UNDO_STACK_LIMIT
 from .core.services.gestor_deshacer import GestorDeshacer
 from .core.services.servicio_clasificacion import ServicioClasificacion
-from .ui.main_window import MainWindow
 from .ui.shared.styles import construir_qss
+from .ui.ventana_principal import VentanaPrincipal
 
 
 def main() -> None:
@@ -32,11 +32,11 @@ def main() -> None:
     gestor_deshacer = GestorDeshacer(repo)
 
     watcher_service = ServicioClasificacion(
-        watcher=WatchdogFileWatcher(),
+        watcher=VigilanteArchivosWatchdog(),
         repo=repo,
     )
 
-    window = MainWindow(
+    window = VentanaPrincipal(
         data_dir=DATA_DIR,
         watcher_service=watcher_service,
         rule_repository=repo,

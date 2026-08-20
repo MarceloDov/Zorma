@@ -8,7 +8,7 @@ from ...core.models.regla import Regla
 from ..shared.styles import COLORS
 
 
-class RulesViewModel(QObject):
+class ReglasViewModel(QObject):
     rules_changed = pyqtSignal(list)
     toast_requested = pyqtSignal(str, str)
 
